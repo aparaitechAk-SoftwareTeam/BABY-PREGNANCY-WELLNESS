@@ -1,0 +1,1 @@
+﻿import { TicketListPage } from '@/pages/support/TicketListPage'; export default function MyTickets() { return <TicketListPage mode='my' title='My Tickets' description='Tickets assigned to you' />; } export { MyTickets };

@@ -1,0 +1,2 @@
+// Common decorators
+export {};

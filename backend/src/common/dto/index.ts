@@ -1,0 +1,2 @@
+// Common dto
+export {};

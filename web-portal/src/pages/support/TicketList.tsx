@@ -1,0 +1,1 @@
+﻿import { TicketListPage } from '@/pages/support/TicketListPage'; export default function TicketList() { return <TicketListPage mode='all' title='Support Tickets' description='View and manage all customer support tickets' />; } export { TicketList };

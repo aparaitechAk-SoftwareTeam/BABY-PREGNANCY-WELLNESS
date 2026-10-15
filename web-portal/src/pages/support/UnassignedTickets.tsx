@@ -1,0 +1,1 @@
+﻿import { TicketListPage } from '@/pages/support/TicketListPage'; export default function UnassignedTickets() { return <TicketListPage mode='unassigned' title='Unassigned Tickets' description='Queue of tickets waiting for assignment' />; } export { UnassignedTickets };

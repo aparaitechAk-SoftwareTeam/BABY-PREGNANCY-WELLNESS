@@ -22,16 +22,17 @@ enum OtpType {
 }
 
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  password        String
-  name            String
-  role            Role              @default(MOTHER)
-  isEmailVerified Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  otps            OtpCode[]
-  profile         PregnancyProfile?
+  id                 String            @id @default(uuid())
+  email              String            @unique
+  password           String
+  name               String
+  role               Role              @default(MOTHER)
+  isEmailVerified    Boolean           @default(false)
+  isProfileCompleted Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  otps               OtpCode[]
+  profile            PregnancyProfile?
 }
 
 model OtpCode {
@@ -48,14 +49,33 @@ model OtpCode {
 }
 
 model PregnancyProfile {
-  id                 String    @id @default(uuid())
-  userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currentWeek        Int       @default(20)
-  trimester          Int       @default(2)
-  dueDate            DateTime?
-  bloodGroup         String?
-  prePregnancyWeight Float?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                       String    @id @default(uuid())
+  userId                   String    @unique
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentWeek              Int       @default(20)
+  currentDay               Int       @default(0)
+  trimester                Int       @default(2)
+  daysRemaining            Int?
+  dueDate                  DateTime?
+  calculationMethod        String?
+  pregnancyType            String?   @default("SINGLE")
+  nickname                 String?
+  height                   Float?
+  heightFt                 String?
+  currentWeight            Float?
+  prePregnancyWeight       Float?
+  bloodGroup               String?
+  motherAge                Int?
+  doctorName               String?
+  hospitalName             String?
+  doctorPhone              String?
+  nextAppointmentDate      String?
+  emergencyContactName     String?
+  emergencyContactRelation String?
+  emergencyContactPhone    String?
+  medicalNotes             String?
+  preferredUnits           String?   @default("METRIC")
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 }
+

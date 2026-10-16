@@ -33,6 +33,7 @@ import {
 } from 'lucide-react-native';
 import { usePregnancyStore, PregnancyProfile } from '../../store/pregnancy.store';
 import { useAuthStore } from '../../store/auth.store';
+import { pregnancyApi } from '../../services/api/pregnancy.api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -77,11 +78,11 @@ export default function PregnancySetupScreen() {
 
   // 1. Gestational Week & Timeline
   const [selectedWeek, setSelectedWeek] = useState(existingProfile?.currentWeek || 20);
-  const [selectedDay, setSelectedDay] = useState(existingProfile?.currentDay || 2);
+  const [selectedDay, setSelectedDay] = useState(existingProfile?.currentDay || 0);
   const [pregnancyType, setPregnancyType] = useState<'SINGLE' | 'TWINS' | 'MULTIPLES'>(
     existingProfile?.pregnancyType || 'SINGLE'
   );
-  const [babyNickname, setBabyNickname] = useState(existingProfile?.nickname || 'Little Miracle');
+  const [babyNickname, setBabyNickname] = useState(existingProfile?.nickname || '');
 
   // Specific Date inputs for LMP or EDD
   const now = new Date();
@@ -94,43 +95,43 @@ export default function PregnancySetupScreen() {
     existingProfile?.preferredUnits || 'METRIC'
   );
   const [height, setHeight] = useState(
-    existingProfile?.height ? String(existingProfile.height) : '165'
+    existingProfile?.height ? String(existingProfile.height) : ''
   );
-  const [heightFt, setHeightFt] = useState(existingProfile?.heightFt || "5'6\"");
+  const [heightFt, setHeightFt] = useState(existingProfile?.heightFt || '');
   const [preWeight, setPreWeight] = useState(
-    existingProfile?.prePregnancyWeight ? String(existingProfile.prePregnancyWeight) : '60'
+    existingProfile?.prePregnancyWeight ? String(existingProfile.prePregnancyWeight) : ''
   );
   const [currentWeight, setCurrentWeight] = useState(
-    existingProfile?.currentWeight ? String(existingProfile.currentWeight) : '65.5'
+    existingProfile?.currentWeight ? String(existingProfile.currentWeight) : ''
   );
   const [motherAge, setMotherAge] = useState(
-    existingProfile?.motherAge ? String(existingProfile.motherAge) : '28'
+    existingProfile?.motherAge ? String(existingProfile.motherAge) : ''
   );
-  const [bloodGroup, setBloodGroup] = useState(existingProfile?.bloodGroup || 'O+');
+  const [bloodGroup, setBloodGroup] = useState(existingProfile?.bloodGroup || '');
 
   // 3. Doctor & Medical Information
   const [doctorName, setDoctorName] = useState(
-    existingProfile?.doctorName || 'Dr. Priya Sharma'
+    existingProfile?.doctorName || ''
   );
   const [hospitalName, setHospitalName] = useState(
-    existingProfile?.hospitalName || 'Apollo Cradle Maternity Hospital'
+    existingProfile?.hospitalName || ''
   );
   const [doctorPhone, setDoctorPhone] = useState(
-    existingProfile?.doctorPhone || '+91 98765 43210'
+    existingProfile?.doctorPhone || ''
   );
   const [nextAppointment, setNextAppointment] = useState(
-    existingProfile?.nextAppointmentDate || 'Week 24 Anomaly Scan'
+    existingProfile?.nextAppointmentDate || ''
   );
 
   // 4. Emergency Contact
   const [emergencyName, setEmergencyName] = useState(
-    existingProfile?.emergencyContactName || 'Rahul Sharma'
+    existingProfile?.emergencyContactName || ''
   );
   const [emergencyRelation, setEmergencyRelation] = useState(
-    existingProfile?.emergencyContactRelation || 'Partner'
+    existingProfile?.emergencyContactRelation || ''
   );
   const [emergencyPhone, setEmergencyPhone] = useState(
-    existingProfile?.emergencyContactPhone || '+91 91234 56789'
+    existingProfile?.emergencyContactPhone || ''
   );
   const [medicalNotes, setMedicalNotes] = useState(
     existingProfile?.medicalNotes || ''
@@ -194,16 +195,6 @@ export default function PregnancySetupScreen() {
       return;
     }
 
-    if (!doctorName.trim()) {
-      setErrorMsg("Please enter your doctor or OB-GYN's name");
-      return;
-    }
-
-    if (!hospitalName.trim()) {
-      setErrorMsg('Please enter your hospital or clinic name');
-      return;
-    }
-
     if (!acknowledged) {
       setErrorMsg('Please confirm you have read the clinical wellness statement below.');
       return;
@@ -212,7 +203,12 @@ export default function PregnancySetupScreen() {
     setIsSubmitting(true);
 
     try {
-      const profileData: PregnancyProfile = {
+      const parsedHeight = parseFloat(height);
+      const parsedWeight = parseFloat(currentWeight);
+      const parsedPreWeight = preWeight.trim() ? parseFloat(preWeight) : parsedWeight;
+      const parsedAge = motherAge.trim() ? parseInt(motherAge, 10) : undefined;
+
+      const profilePayload = {
         dueDate: targetDueDate.toISOString(),
         calculationMethod: calcMethod,
         currentWeek: selectedWeek,
@@ -220,15 +216,15 @@ export default function PregnancySetupScreen() {
         trimester: trimester as 1 | 2 | 3,
         daysRemaining,
         pregnancyType,
-        nickname: babyNickname.trim() || 'Little Miracle',
+        nickname: babyNickname.trim(),
 
         // Body metrics
-        height: parseFloat(height) || 165,
-        heightFt: heightFt || "5'6\"",
-        currentWeight: parseFloat(currentWeight) || 65.5,
-        prePregnancyWeight: parseFloat(preWeight) || parseFloat(currentWeight) || 60,
-        bloodGroup: bloodGroup || 'O+',
-        motherAge: parseInt(motherAge, 10) || 28,
+        height: !isNaN(parsedHeight) ? parsedHeight : undefined,
+        heightFt: heightFt || '',
+        currentWeight: !isNaN(parsedWeight) ? parsedWeight : undefined,
+        prePregnancyWeight: !isNaN(parsedPreWeight) ? parsedPreWeight : undefined,
+        bloodGroup: bloodGroup || undefined,
+        motherAge: parsedAge,
 
         // Doctor & Medical
         doctorName: doctorName.trim(),
@@ -243,22 +239,34 @@ export default function PregnancySetupScreen() {
         medicalNotes: medicalNotes.trim(),
 
         preferredUnits: unitSystem,
-        setupCompleted: true,
       };
 
+      // 1. Save directly into backend Neon PostgreSQL Database
+      try {
+        await pregnancyApi.saveProfile(profilePayload);
+      } catch (apiError: any) {
+        console.warn('Backend database save profile notification:', apiError?.message || apiError);
+      }
+
+      // 2. Save locally to pregnancy store
+      const profileData: PregnancyProfile = {
+        ...profilePayload,
+        setupCompleted: true,
+      };
       await setProfile(profileData);
 
-      // Also update auth store user so setupCompleted is preserved
+      // 3. Also update auth store user so setupCompleted & isProfileCompleted are preserved
       if (user) {
         await setUser({
           ...user,
           setupCompleted: true,
-          motherAge: parseInt(motherAge, 10) || 28,
-          bloodGroup: bloodGroup || 'O+',
+          isProfileCompleted: true,
+          motherAge: parsedAge,
+          bloodGroup: bloodGroup || '',
         });
       }
 
-      // Navigate to mother dashboard
+      // 4. Navigate to mother dashboard
       router.replace('/(mother)');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to save information. Please try again.');
@@ -450,7 +458,7 @@ export default function PregnancySetupScreen() {
               <Sparkles size={16} color="#E11D48" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Little Miracle, Peanut, Junior"
+                placeholder="e.g. Peanut, Bean, Miracle (Optional)"
                 placeholderTextColor="#94A3B8"
                 value={babyNickname}
                 onChangeText={setBabyNickname}
@@ -701,7 +709,7 @@ export default function PregnancySetupScreen() {
               <Stethoscope size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Dr. Priya Sharma, MD (OB-GYN)"
+                placeholder="e.g. Dr. Sarah Jenkins, MD (OB-GYN)"
                 placeholderTextColor="#94A3B8"
                 value={doctorName}
                 onChangeText={setDoctorName}
@@ -716,7 +724,7 @@ export default function PregnancySetupScreen() {
               <Building2 size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Apollo Cradle Hospital, Cloudnine"
+                placeholder="e.g. City Maternity Hospital"
                 placeholderTextColor="#94A3B8"
                 value={hospitalName}
                 onChangeText={setHospitalName}
@@ -747,7 +755,7 @@ export default function PregnancySetupScreen() {
               <Calendar size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Week 24 Anomaly Scan, Glucose Test"
+                placeholder="e.g. Routine 20-week ultrasound"
                 placeholderTextColor="#94A3B8"
                 value={nextAppointment}
                 onChangeText={setNextAppointment}
@@ -779,7 +787,7 @@ export default function PregnancySetupScreen() {
               <User size={16} color="#D97706" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Rahul Sharma"
+                placeholder="e.g. Partner or Family Member Name"
                 placeholderTextColor="#94A3B8"
                 value={emergencyName}
                 onChangeText={setEmergencyName}
@@ -820,7 +828,7 @@ export default function PregnancySetupScreen() {
               <Phone size={16} color="#D97706" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. +91 91234 56789"
+                placeholder="e.g. +91 98765 43210"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={emergencyPhone}

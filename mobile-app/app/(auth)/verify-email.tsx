@@ -175,43 +175,67 @@ export default function VerifyEmailScreen() {
             </View>
           ) : null}
 
-          {/* OTP Digit Boxes */}
-          <View style={styles.otpBoxesRow}>
-            {[0, 1, 2, 3, 4, 5].map((index) => {
-              const char = otp[index] || '';
-              const isCurrent = index === otp.length;
-              return (
-                <View
-                  key={index}
-                  style={[
-                    styles.otpBox,
-                    char ? styles.otpBoxFilled : null,
-                    isCurrent ? styles.otpBoxActive : null,
-                  ]}
-                >
-                  <Text style={styles.otpBoxText}>{char}</Text>
-                </View>
-              );
-            })}
-          </View>
+          {/* OTP Digit Boxes - Wrapped in TouchableOpacity so tapping anywhere immediately focuses and allows editing */}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => inputRef.current?.focus()}
+            style={styles.otpBoxesContainer}
+          >
+            <View style={styles.otpBoxesRow}>
+              {[0, 1, 2, 3, 4, 5].map((index) => {
+                const char = otp[index] || '';
+                const isCurrent = index === otp.length;
+                const isFocused = isCurrent && !errorMessage;
+                const hasError = !!errorMessage;
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.otpBox,
+                      char ? styles.otpBoxFilled : null,
+                      isFocused ? styles.otpBoxActive : null,
+                      hasError ? styles.otpBoxError : null,
+                    ]}
+                  >
+                    <Text style={[styles.otpBoxText, hasError && styles.otpBoxTextError]}>{char}</Text>
+                  </View>
+                );
+              })}
+            </View>
 
-          {/* Hidden full TextInput covering the tap area */}
-          <TextInput
-            ref={inputRef}
-            style={styles.hiddenInput}
-            value={otp}
-            onChangeText={(text) => {
-              const sanitized = text.replace(/[^0-9]/g, '').slice(0, 6);
-              setOtp(sanitized);
-              if (sanitized.length === 6) {
+            {/* Hidden full TextInput directly overlaying the boxes area so taps hit the input natively */}
+            <TextInput
+              ref={inputRef}
+              style={styles.fullOverlayInput}
+              value={otp}
+              onChangeText={(text) => {
+                const sanitized = text.replace(/[^0-9]/g, '').slice(0, 6);
+                setOtp(sanitized);
+                if (errorMessage) {
+                  setErrorMessage('');
+                }
+              }}
+              keyboardType="number-pad"
+              maxLength={6}
+              textContentType="oneTimeCode"
+              autoFocus
+            />
+          </TouchableOpacity>
+
+          {/* Quick Clear / Edit button when digits exist or if error occurred */}
+          {otp.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButtonRow}
+              onPress={() => {
+                setOtp('');
                 setErrorMessage('');
-              }
-            }}
-            keyboardType="number-pad"
-            maxLength={6}
-            textContentType="oneTimeCode"
-            autoFocus
-          />
+                inputRef.current?.focus();
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearButtonText}>Clear & re-enter code</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Verify Button */}
           <TouchableOpacity
@@ -379,11 +403,16 @@ const styles = StyleSheet.create({
     color: '#047857',
     fontWeight: '600',
   },
+  otpBoxesContainer: {
+    position: 'relative',
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 14,
+  },
   otpBoxesRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginVertical: 18,
     width: '100%',
   },
   otpBox: {
@@ -403,17 +432,38 @@ const styles = StyleSheet.create({
   otpBoxActive: {
     borderColor: '#E11D48',
     borderWidth: 2,
+    backgroundColor: '#FFF5F6',
+  },
+  otpBoxError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   otpBoxText: {
     fontSize: 22,
     fontWeight: '800',
     color: '#0F172A',
   },
-  hiddenInput: {
-    position: 'absolute',
+  otpBoxTextError: {
+    color: '#DC2626',
+  },
+  fullOverlayInput: {
+    ...StyleSheet.absoluteFill,
     opacity: 0.01,
-    width: 1,
-    height: 1,
+    color: 'transparent',
+    fontSize: 1,
+  },
+  clearButtonRow: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  clearButtonText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
   verifyButton: {
     width: '100%',

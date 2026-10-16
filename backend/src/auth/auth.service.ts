@@ -161,6 +161,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        isProfileCompleted: user.isProfileCompleted ?? false,
         profile: user.profile,
       },
     };
@@ -255,6 +256,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        isProfileCompleted: user.isProfileCompleted ?? false,
         profile: user.profile,
       },
     };

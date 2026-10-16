@@ -36,14 +36,15 @@ export default function ForgotPasswordScreen() {
   // Step 1: Request OTP
   const handleRequestOtp = async () => {
     setErrorMessage('');
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('Please enter a valid registered email address');
+    const emailLower = email.trim().toLowerCase();
+    if (!emailLower || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(emailLower)) {
+      setErrorMessage('Please enter a valid registered @gmail.com address');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await authApi.forgotPassword({ email: email.trim().toLowerCase() });
+      await authApi.forgotPassword({ email: emailLower });
       setSuccessBanner('A 6-digit verification code has been sent to your email.');
       setStep(2);
     } catch (err: any) {
@@ -64,8 +65,28 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    if (!newPassword.trim() || newPassword.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
+    if (!newPassword || newPassword.length < 8 || newPassword.length > 16) {
+      setErrorMessage('Password must be between 8 and 16 characters long');
+      return;
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      setErrorMessage('Password must contain at least one uppercase letter (A-Z)');
+      return;
+    }
+
+    if (!/[a-z]/.test(newPassword)) {
+      setErrorMessage('Password must contain at least one lowercase letter (a-z)');
+      return;
+    }
+
+    if (!/\d/.test(newPassword)) {
+      setErrorMessage('Password must contain at least one number (0-9)');
+      return;
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      setErrorMessage('Password must contain at least one special symbol (e.g. !@#$%^&*)');
       return;
     }
 

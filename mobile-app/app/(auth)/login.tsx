@@ -36,12 +36,18 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setErrorMessage('');
 
-    if (!emailOrPhone.trim()) {
+    const identifier = emailOrPhone.trim().toLowerCase();
+    if (!identifier) {
       setErrorMessage(
         loginMode === 'email'
           ? 'Please enter your registered email'
           : 'Please enter your mobile number'
       );
+      return;
+    }
+
+    if (loginMode === 'email' && !/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(identifier)) {
+      setErrorMessage('Please enter a valid @gmail.com address');
       return;
     }
 

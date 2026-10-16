@@ -1,4 +1,13 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsOptional,
+  IsEnum,
+  Matches,
+} from 'class-validator';
 
 export enum Role {
   ADMIN = 'ADMIN',
@@ -16,10 +25,18 @@ export enum OtpType {
 
 export class SignupDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
+  @Matches(/^[a-zA-Z0-9._%+-]+@gmail\.com$/i, {
+    message: 'Email must be a valid @gmail.com address',
+  })
   email: string;
 
   @IsString()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(16, { message: 'Password cannot exceed 16 characters' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/, {
+    message:
+      'Password must be 8-16 characters and include at least one uppercase letter, one lowercase letter, one number, and one symbol',
+  })
   password: string;
 
   @IsString()

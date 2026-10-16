@@ -66,23 +66,44 @@ export default function SignupScreen() {
       return;
     }
 
-    if (!email.trim()) {
+    const emailLower = email.trim().toLowerCase();
+    if (!emailLower) {
       setErrorMessage('Please enter your email address');
       return;
     }
 
-    if (!email.includes('@')) {
-      setErrorMessage('Please enter a valid email address');
+    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(emailLower)) {
+      setErrorMessage('Email address must be a valid @gmail.com address');
       return;
     }
 
-    if (!password.trim()) {
+    if (!password) {
       setErrorMessage('Please enter a password');
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long');
+    if (password.length < 8 || password.length > 16) {
+      setErrorMessage('Password must be between 8 and 16 characters long');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      setErrorMessage('Password must contain at least one uppercase letter (A-Z)');
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      setErrorMessage('Password must contain at least one lowercase letter (a-z)');
+      return;
+    }
+
+    if (!/\d/.test(password)) {
+      setErrorMessage('Password must contain at least one number (0-9)');
+      return;
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      setErrorMessage('Password must contain at least one special symbol (e.g. !@#$%^&*)');
       return;
     }
 

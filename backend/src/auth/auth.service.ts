@@ -9,12 +9,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 import { EmailService } from '../common/email.service';
-import { SignupDto } from './dto/signup.dto';
+import { SignupDto, Role } from './dto/signup.dto';
 import { VerifyOtpDto, ResendOtpDto } from './dto/verify-otp.dto';
 import { SigninDto } from './dto/signin.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { OtpType, Role } from '@prisma/client';
+import { OtpType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {

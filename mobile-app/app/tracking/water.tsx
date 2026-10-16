@@ -26,6 +26,8 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useAuthStore } from '../../store/auth.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface WaterLogEntry {
   id: string;
@@ -47,6 +49,7 @@ const GOAL_STORAGE_KEY = 'aparai_water_goal_v1';
 export default function WaterTrackerScreen() {
   const router = useRouter();
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
+  const user = useAuthStore((state: any) => state.user);
 
   const [dailyGoalMl, setDailyGoalMl] = useState(2500);
   const [entries, setEntries] = useState<WaterLogEntry[]>(DEFAULT_ENTRIES);
@@ -99,6 +102,19 @@ export default function WaterTrackerScreen() {
 
     const updated = [newEntry, ...entries];
     saveEntries(updated);
+
+    // Sync water log to Neon PostgreSQL database
+    try {
+      trackingApi.logWater({
+        userId: user?.id,
+        email: user?.email,
+        amountMl,
+        label,
+        timeStr,
+      }).catch((err) => console.warn('Water sync notice:', err?.message || err));
+    } catch (e) {
+      // Ignore background sync errors
+    }
 
     if (totalLoggedMl + amountMl >= dailyGoalMl && totalLoggedMl < dailyGoalMl) {
       Alert.alert(

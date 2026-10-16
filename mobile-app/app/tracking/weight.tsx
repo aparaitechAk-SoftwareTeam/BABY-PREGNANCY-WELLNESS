@@ -26,6 +26,8 @@ import {
   CheckCircle2,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useAuthStore } from '../../store/auth.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface WeightEntry {
   id: string;
@@ -51,6 +53,7 @@ export default function WeightTrackerScreen() {
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
   const trimester = usePregnancyStore((state) => state.trimester);
   const profile = usePregnancyStore((state) => state.profile);
+  const user = useAuthStore((state: any) => state.user);
 
   const preWeightKg = profile?.prePregnancyWeight || 58.0;
   const [entries, setEntries] = useState<WeightEntry[]>(DEFAULT_ENTRIES);
@@ -131,7 +134,21 @@ export default function WeightTrackerScreen() {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
-      console.error('Failed to save weight entry:', e);
+      console.error('Failed to save weight entry locally:', e);
+    }
+
+    // Sync weight log to Neon PostgreSQL database
+    try {
+      trackingApi.logWeight({
+        userId: user?.id,
+        email: user?.email,
+        weightKg: parseFloat(weightInKg.toFixed(1)),
+        week: currentWeek,
+        dateStr,
+        note: inputNote.trim() || undefined,
+      }).catch((err) => console.warn('Weight sync notice:', err?.message || err));
+    } catch (e) {
+      // Ignore background sync errors
     }
 
     setInputWeight('');

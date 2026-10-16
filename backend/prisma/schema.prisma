@@ -33,6 +33,11 @@ model User {
   updatedAt          DateTime          @updatedAt
   otps               OtpCode[]
   profile            PregnancyProfile?
+  kickSessions       KickSession[]
+  waterLogs          WaterLog[]
+  weightLogs         WeightLog[]
+  symptomLogs        SymptomLog[]
+  appointments       Appointment[]
 }
 
 model OtpCode {
@@ -77,5 +82,76 @@ model PregnancyProfile {
   preferredUnits           String?   @default("METRIC")
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
+}
+
+model KickSession {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kicks           Int
+  durationSeconds Int
+  reachedTen      Boolean  @default(true)
+  startTime       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model WaterLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountMl  Int
+  timeStr   String?
+  label     String?
+  loggedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId, loggedAt])
+}
+
+model WeightLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg  Float
+  week      Int?
+  dateStr   String?
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SymptomLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symptoms  String[]
+  severity  String?
+  notes     String?
+  isUrgent  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Appointment {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  doctorName      String?
+  hospitalName    String?
+  doctorPhone     String?
+  appointmentDate DateTime
+  timeStr         String?
+  notes           String?
+  status          String   @default("UPCOMING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, appointmentDate])
 }
 

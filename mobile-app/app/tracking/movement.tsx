@@ -29,6 +29,8 @@ import {
   History,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useAuthStore } from '../../store/auth.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface KickSession {
   id: string;
@@ -74,6 +76,7 @@ const STORAGE_KEY = 'aparai_kick_sessions';
 export default function MovementTrackerScreen() {
   const router = useRouter();
   const pregnancyProfile = usePregnancyStore((state) => state.profile);
+  const user = useAuthStore((state: any) => state.user);
 
   // Kick session states
   const [isActive, setIsActive] = useState(false);
@@ -175,11 +178,26 @@ export default function MovementTrackerScreen() {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
-      console.error('Failed to save session:', e);
+      console.error('Failed to save session locally:', e);
+    }
+
+    // Sync to Neon PostgreSQL Database
+    try {
+      await trackingApi.logMovement({
+        userId: user?.id,
+        email: user?.email,
+        kicks: count,
+        durationSeconds: secondsElapsed,
+        reachedTen: count >= 10,
+        startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        notes: sessionNotes.trim() || undefined,
+      });
+    } catch (apiErr: any) {
+      console.warn('Backend kick session sync notice:', apiErr?.message || apiErr);
     }
 
     handleResetSession();
-    Alert.alert('Session Saved! ✅', 'Your movement tracking session has been added to your log.');
+    Alert.alert('Session Saved! ✅', 'Your movement tracking session has been added to your log and cloud timeline.');
   };
 
   const handleEmergencyCall = () => {

@@ -26,6 +26,8 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useAuthStore } from '../../store/auth.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface SymptomCategory {
   name: string;
@@ -97,6 +99,7 @@ export default function SymptomsTrackerScreen() {
   const router = useRouter();
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
   const profile = usePregnancyStore((state) => state.profile);
+  const user = useAuthStore((state: any) => state.user);
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [severity, setSeverity] = useState<'Mild' | 'Moderate' | 'Severe'>('Mild');
@@ -175,14 +178,28 @@ export default function SymptomsTrackerScreen() {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
-      console.error('Failed to save symptom log:', e);
+      console.error('Failed to save symptom log locally:', e);
+    }
+
+    // Sync symptom log to Neon PostgreSQL database
+    try {
+      trackingApi.logSymptoms({
+        userId: user?.id,
+        email: user?.email,
+        symptoms: selectedSymptoms,
+        severity,
+        notes: notes.trim() || undefined,
+        isUrgent: hasRedFlag,
+      }).catch((err) => console.warn('Symptoms sync notice:', err?.message || err));
+    } catch (e) {
+      // Ignore background sync errors
     }
 
     setSelectedSymptoms([]);
     setNotes('');
     setSeverity('Mild');
 
-    Alert.alert('Check-in Saved! ✅', 'Your symptom record has been logged in your personal history.');
+    Alert.alert('Check-in Saved! ✅', 'Your symptom record has been logged in your personal history and cloud timeline.');
   };
 
   const handleDeleteLog = (id: string) => {

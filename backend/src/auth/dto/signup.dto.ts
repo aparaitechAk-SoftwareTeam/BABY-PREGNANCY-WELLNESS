@@ -9,6 +9,11 @@ export enum Role {
   FAMILY = 'FAMILY',
 }
 
+export enum OtpType {
+  VERIFICATION = 'VERIFICATION',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+}
+
 export class SignupDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   email: string;

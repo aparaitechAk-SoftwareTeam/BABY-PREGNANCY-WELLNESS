@@ -9,12 +9,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma.service';
 import { EmailService } from '../common/email.service';
-import { SignupDto, Role } from './dto/signup.dto';
+import { SignupDto, Role, OtpType } from './dto/signup.dto';
 import { VerifyOtpDto, ResendOtpDto } from './dto/verify-otp.dto';
 import { SigninDto } from './dto/signin.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { OtpType } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -33,8 +32,9 @@ export class AuthService {
 
   // 1. SIGNUP
   async signup(dto: SignupDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+    const email = dto.email.toLowerCase();
+    const existing = await (this.prisma as any).user.findUnique({
+      where: { email },
     });
 
     if (existing) {
@@ -43,23 +43,23 @@ export class AuthService {
       }
       // If unverified, update name & password and resend OTP
       const hashedPassword = await bcrypt.hash(dto.password, 10);
-      await this.prisma.user.update({
+      await (this.prisma as any).user.update({
         where: { id: existing.id },
         data: {
           name: dto.name,
           password: hashedPassword,
-          role: dto.role || existing.role,
+          role: (dto.role || existing.role) as any,
         },
       });
 
       const otp = this.generateOtp();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      await this.prisma.otpCode.create({
+      await (this.prisma as any).otpCode.create({
         data: {
           email: existing.email,
           code: otp,
-          type: OtpType.VERIFICATION,
+          type: OtpType.VERIFICATION as any,
           expiresAt,
           userId: existing.id,
         },
@@ -76,19 +76,19 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
+    const user = await (this.prisma as any).user.create({
       data: {
-        email: dto.email.toLowerCase(),
+        email,
         password: hashedPassword,
         name: dto.name,
-        role: dto.role || Role.MOTHER,
+        role: (dto.role || Role.MOTHER) as any,
         isEmailVerified: false,
       },
     });
 
     // If mother, create default profile
     if (user.role === Role.MOTHER) {
-      await this.prisma.pregnancyProfile.create({
+      await (this.prisma as any).pregnancyProfile.create({
         data: {
           userId: user.id,
           currentWeek: 20,
@@ -100,11 +100,11 @@ export class AuthService {
     const otp = this.generateOtp();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    await this.prisma.otpCode.create({
+    await (this.prisma as any).otpCode.create({
       data: {
         email: user.email,
         code: otp,
-        type: OtpType.VERIFICATION,
+        type: OtpType.VERIFICATION as any,
         expiresAt,
         userId: user.id,
       },
@@ -123,11 +123,11 @@ export class AuthService {
   // 2. VERIFY OTP (Account Activation)
   async verifyOtp(dto: VerifyOtpDto) {
     const email = dto.email.toLowerCase();
-    const otpRecord = await this.prisma.otpCode.findFirst({
+    const otpRecord = await (this.prisma as any).otpCode.findFirst({
       where: {
         email,
         code: dto.otp,
-        type: OtpType.VERIFICATION,
+        type: OtpType.VERIFICATION as any,
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: 'desc' },
@@ -138,15 +138,15 @@ export class AuthService {
     }
 
     // Activate User
-    const user = await this.prisma.user.update({
+    const user = await (this.prisma as any).user.update({
       where: { email },
       data: { isEmailVerified: true },
       include: { profile: true },
     });
 
     // Clean up used OTPs
-    await this.prisma.otpCode.deleteMany({
-      where: { email, type: OtpType.VERIFICATION },
+    await (this.prisma as any).otpCode.deleteMany({
+      where: { email, type: OtpType.VERIFICATION as any },
     });
 
     const token = this.generateToken(user);
@@ -169,7 +169,7 @@ export class AuthService {
   // 3. RESEND OTP
   async resendOtp(dto: ResendOtpDto) {
     const email = dto.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { email },
     });
 
@@ -184,11 +184,11 @@ export class AuthService {
     const otp = this.generateOtp();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await this.prisma.otpCode.create({
+    await (this.prisma as any).otpCode.create({
       data: {
         email: user.email,
         code: otp,
-        type: OtpType.VERIFICATION,
+        type: OtpType.VERIFICATION as any,
         expiresAt,
         userId: user.id,
       },
@@ -206,7 +206,7 @@ export class AuthService {
   // 4. SIGNIN / LOGIN
   async signin(dto: SigninDto) {
     const email = dto.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { email },
       include: { profile: true },
     });
@@ -225,11 +225,11 @@ export class AuthService {
       const otp = this.generateOtp();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      await this.prisma.otpCode.create({
+      await (this.prisma as any).otpCode.create({
         data: {
           email: user.email,
           code: otp,
-          type: OtpType.VERIFICATION,
+          type: OtpType.VERIFICATION as any,
           expiresAt,
           userId: user.id,
         },
@@ -263,12 +263,11 @@ export class AuthService {
   // 5. FORGOT PASSWORD (Send OTP)
   async forgotPassword(dto: ForgotPasswordDto) {
     const email = dto.email.toLowerCase();
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { email },
     });
 
     if (!user) {
-      // Don't reveal account existence for security, but return generic success message
       return {
         success: true,
         message: 'If an account exists with this email, a 6-digit password reset code has been sent.',
@@ -279,11 +278,11 @@ export class AuthService {
     const otp = this.generateOtp();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await this.prisma.otpCode.create({
+    await (this.prisma as any).otpCode.create({
       data: {
         email: user.email,
         code: otp,
-        type: OtpType.PASSWORD_RESET,
+        type: OtpType.PASSWORD_RESET as any,
         expiresAt,
         userId: user.id,
       },
@@ -301,11 +300,11 @@ export class AuthService {
   // 6. RESET PASSWORD (Verify OTP & Set New Password)
   async resetPassword(dto: ResetPasswordDto) {
     const email = dto.email.toLowerCase();
-    const otpRecord = await this.prisma.otpCode.findFirst({
+    const otpRecord = await (this.prisma as any).otpCode.findFirst({
       where: {
         email,
         code: dto.otp,
-        type: OtpType.PASSWORD_RESET,
+        type: OtpType.PASSWORD_RESET as any,
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: 'desc' },
@@ -316,17 +315,17 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({
+    await (this.prisma as any).user.update({
       where: { email },
       data: {
         password: hashedPassword,
-        isEmailVerified: true, // Resetting via email proves ownership
+        isEmailVerified: true,
       },
     });
 
     // Invalidate reset OTPs
-    await this.prisma.otpCode.deleteMany({
-      where: { email, type: OtpType.PASSWORD_RESET },
+    await (this.prisma as any).otpCode.deleteMany({
+      where: { email, type: OtpType.PASSWORD_RESET as any },
     });
 
     return {

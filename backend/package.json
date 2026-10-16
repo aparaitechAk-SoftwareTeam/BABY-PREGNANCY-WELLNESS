@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "NestJS REST API for AparaiTech Pregnancy Wellness Application",
   "scripts": {
+    "dev": "nest start --watch",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",

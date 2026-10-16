@@ -76,6 +76,8 @@ export default function VerifyEmailScreen() {
       setTimeout(() => {
         if (user.role === 'CAREGIVER') {
           router.replace('/(caregiver)');
+        } else if (!user.setupCompleted && !user.isProfileCompleted) {
+          router.replace('/(onboarding)/pregnancy-setup');
         } else {
           router.replace('/(mother)');
         }

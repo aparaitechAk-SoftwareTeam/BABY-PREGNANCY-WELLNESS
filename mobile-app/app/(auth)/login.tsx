@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Heart, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
+import { authApi } from '../../services/api/auth.api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -51,43 +52,35 @@ export default function LoginScreen() {
 
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 850));
+      const identifier = emailOrPhone.trim().toLowerCase();
+      
+      const response = await authApi.signin({
+        email: identifier,
+        password,
+      });
 
-      // Validate credentials - demo users
-      const validCredentials: { [key: string]: { password: string; role: string; name: string } } = {
-        'mother@aparaitech.com': { password: 'Mother@123', role: 'MOTHER', name: 'Priya Sharma' },
-        '+919876543210': { password: 'Mother@123', role: 'MOTHER', name: 'Priya Sharma' },
-        'caregiver@aparaitech.com': { password: 'Caregiver@123', role: 'CAREGIVER', name: 'Rahul Sharma' },
-        '+919123456789': { password: 'Caregiver@123', role: 'CAREGIVER', name: 'Rahul Sharma' },
-      };
+      const { user, token } = response.data;
 
-      const identifier = loginMode === 'email' ? emailOrPhone.trim() : emailOrPhone.trim();
-      const credentials = validCredentials[identifier];
+      await setUser(user);
+      await setToken(token);
 
-      if (!credentials || credentials.password !== password) {
-        setErrorMessage('Invalid email/phone or password. Please check and try again.');
-        return;
-      }
-
-      const mockUser = {
-        id: 'usr_' + Date.now(),
-        name: credentials.name,
-        email: loginMode === 'email' ? identifier : 'user@aparaitech.com',
-        phone: loginMode === 'phone' ? identifier : '',
-        role: credentials.role,
-        lastLogin: new Date().toISOString(),
-      };
-
-      await setUser(mockUser);
-      await setToken('mock_jwt_token_' + Date.now());
-
-      if (credentials.role === 'MOTHER') {
-        router.replace('/(mother)');
-      } else {
+      if (user.role === 'CAREGIVER') {
         router.replace('/(caregiver)');
+      } else {
+        router.replace('/(mother)');
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Invalid credentials. Please try again.');
+      const data = err?.response?.data;
+      if (data?.requiresVerification) {
+        // Redirect to verify email OTP
+        router.push({
+          pathname: '/(auth)/verify-email',
+          params: { email: data.email || emailOrPhone.trim() },
+        });
+        return;
+      }
+      const msg = data?.message || err?.message || 'Invalid email/phone or password. Please try again.';
+      setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Sign in failed.');
     } finally {
       setIsSubmitting(false);
     }

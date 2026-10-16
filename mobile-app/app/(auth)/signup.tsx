@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { TermsPrivacyModal } from '../../components/modals/TermsPrivacyModal';
+import { authApi } from '../../services/api/auth.api';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -109,32 +110,27 @@ export default function SignupScreen() {
 
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 850));
-
-      const mockUser = {
-        id: 'usr_' + Date.now(),
+      const role = isMother ? 'MOTHER' : 'CAREGIVER';
+      await authApi.signup({
         name: fullName.trim(),
-        email: email.trim(),
-        role: isMother ? 'MOTHER' : 'CAREGIVER',
-        isMother: isMother,
-        createdAt: new Date().toISOString(),
-      };
+        email: email.trim().toLowerCase(),
+        password: password,
+        role,
+      });
 
-      const mockToken = 'signup_jwt_token_' + Date.now();
-
-      // Use auth store (which handles AsyncStorage internally)
-      await setUser(mockUser);
-      await setToken(mockToken);
-
-      // Navigate to onboarding pregnancy setup for mother, or caregiver dashboard
-      if (isMother) {
-        router.replace('/(onboarding)/pregnancy-setup');
-      } else {
-        router.replace('/(caregiver)');
-      }
+      // Redirect to OTP verification screen
+      router.push({
+        pathname: '/(auth)/verify-email',
+        params: { email: email.trim().toLowerCase(), role },
+      });
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Sign up failed. Please try again.');
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Registration failed. Please check your details and try again.';
+      setErrorMessage(
+        typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Sign up failed. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }

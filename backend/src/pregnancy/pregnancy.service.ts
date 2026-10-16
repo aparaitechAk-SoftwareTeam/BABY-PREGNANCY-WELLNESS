@@ -6,35 +6,73 @@ import { SavePregnancyProfileDto } from './dto/save-pregnancy-profile.dto';
 export class PregnancyService {
   constructor(private prisma: PrismaService) {}
 
-  async saveProfile(userId: string, dto: SavePregnancyProfileDto) {
-    const user = await (this.prisma as any).user.findUnique({
-      where: { id: userId },
-    });
+  async saveProfile(userIdOrIdentifier: string, dto: SavePregnancyProfileDto) {
+    let user: any = null;
 
-    if (!user) {
-      throw new NotFoundException('User not found');
+    if (userIdOrIdentifier) {
+      user = await (this.prisma as any).user.findUnique({
+        where: { id: userIdOrIdentifier },
+      });
     }
 
-    const dueDate = dto.dueDate ? new Date(dto.dueDate) : undefined;
+    if (!user && dto.email) {
+      user = await (this.prisma as any).user.findUnique({
+        where: { email: dto.email.toLowerCase() },
+      });
+    }
+
+    if (!user && dto.userId) {
+      user = await (this.prisma as any).user.findUnique({
+        where: { id: dto.userId },
+      });
+    }
+
+    if (!user) {
+      throw new NotFoundException('User account not found for profile save');
+    }
+
+    const userId = user.id;
+
+    // Ensure due date is computed if missing
+    let parsedDueDate: Date;
+    if (dto.dueDate) {
+      parsedDueDate = new Date(dto.dueDate);
+      if (isNaN(parsedDueDate.getTime())) {
+        const remainingDays = dto.daysRemaining ?? Math.max(0, 280 - (dto.currentWeek ?? 20) * 7);
+        parsedDueDate = new Date(Date.now() + remainingDays * 24 * 60 * 60 * 1000);
+      }
+    } else {
+      const remainingDays = dto.daysRemaining ?? Math.max(0, 280 - (dto.currentWeek ?? 20) * 7);
+      parsedDueDate = new Date(Date.now() + remainingDays * 24 * 60 * 60 * 1000);
+    }
+
+    // Default pre-pregnancy weight to current weight if not separately specified
+    const preWeight = dto.prePregnancyWeight ?? dto.currentWeight ?? 60;
+    const currWeight = dto.currentWeight ?? dto.prePregnancyWeight ?? 65.5;
+    const bloodGroup = dto.bloodGroup && dto.bloodGroup.trim() ? dto.bloodGroup.trim() : 'O+';
+    const height = dto.height ?? 165;
+    const currentWeek = dto.currentWeek ?? 20;
+    const trimester = dto.trimester ?? (currentWeek <= 12 ? 1 : currentWeek <= 27 ? 2 : 3);
+    const daysRemaining = dto.daysRemaining ?? Math.max(0, 280 - currentWeek * 7);
 
     // Upsert the pregnancy profile in Neon PostgreSQL
     const profile = await (this.prisma as any).pregnancyProfile.upsert({
       where: { userId },
       update: {
-        dueDate,
-        calculationMethod: dto.calculationMethod,
-        currentWeek: dto.currentWeek ?? 20,
+        dueDate: parsedDueDate,
+        calculationMethod: dto.calculationMethod || 'EDD',
+        currentWeek,
         currentDay: dto.currentDay ?? 0,
-        trimester: dto.trimester ?? 2,
-        daysRemaining: dto.daysRemaining,
+        trimester,
+        daysRemaining,
         pregnancyType: dto.pregnancyType || 'SINGLE',
         nickname: dto.nickname || '',
-        height: dto.height,
-        heightFt: dto.heightFt,
-        currentWeight: dto.currentWeight,
-        prePregnancyWeight: dto.prePregnancyWeight,
-        bloodGroup: dto.bloodGroup,
-        motherAge: dto.motherAge,
+        height,
+        heightFt: dto.heightFt || '',
+        currentWeight: currWeight,
+        prePregnancyWeight: preWeight,
+        bloodGroup,
+        motherAge: dto.motherAge ?? 28,
         doctorName: dto.doctorName || '',
         hospitalName: dto.hospitalName || '',
         doctorPhone: dto.doctorPhone || '',
@@ -47,20 +85,20 @@ export class PregnancyService {
       },
       create: {
         userId,
-        dueDate,
-        calculationMethod: dto.calculationMethod,
-        currentWeek: dto.currentWeek ?? 20,
+        dueDate: parsedDueDate,
+        calculationMethod: dto.calculationMethod || 'EDD',
+        currentWeek,
         currentDay: dto.currentDay ?? 0,
-        trimester: dto.trimester ?? 2,
-        daysRemaining: dto.daysRemaining,
+        trimester,
+        daysRemaining,
         pregnancyType: dto.pregnancyType || 'SINGLE',
         nickname: dto.nickname || '',
-        height: dto.height,
-        heightFt: dto.heightFt,
-        currentWeight: dto.currentWeight,
-        prePregnancyWeight: dto.prePregnancyWeight,
-        bloodGroup: dto.bloodGroup,
-        motherAge: dto.motherAge,
+        height,
+        heightFt: dto.heightFt || '',
+        currentWeight: currWeight,
+        prePregnancyWeight: preWeight,
+        bloodGroup,
+        motherAge: dto.motherAge ?? 28,
         doctorName: dto.doctorName || '',
         hospitalName: dto.hospitalName || '',
         doctorPhone: dto.doctorPhone || '',
@@ -86,10 +124,21 @@ export class PregnancyService {
     };
   }
 
-  async getProfile(userId: string) {
-    const profile = await (this.prisma as any).pregnancyProfile.findUnique({
-      where: { userId },
+  async getProfile(userIdOrIdentifier: string) {
+    let profile = await (this.prisma as any).pregnancyProfile.findUnique({
+      where: { userId: userIdOrIdentifier },
     });
+
+    if (!profile) {
+      // Try finding by user email
+      const user = await (this.prisma as any).user.findUnique({
+        where: { email: userIdOrIdentifier.toLowerCase() },
+        include: { profile: true },
+      });
+      if (user && user.profile) {
+        profile = user.profile;
+      }
+    }
 
     if (!profile) {
       throw new NotFoundException('Pregnancy profile not found');

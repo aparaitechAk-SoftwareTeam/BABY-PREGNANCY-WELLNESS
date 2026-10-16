@@ -107,7 +107,7 @@ export default function PregnancySetupScreen() {
   const [motherAge, setMotherAge] = useState(
     existingProfile?.motherAge ? String(existingProfile.motherAge) : ''
   );
-  const [bloodGroup, setBloodGroup] = useState(existingProfile?.bloodGroup || '');
+  const [bloodGroup, setBloodGroup] = useState(existingProfile?.bloodGroup || 'O+');
 
   // 3. Doctor & Medical Information
   const [doctorName, setDoctorName] = useState(
@@ -203,13 +203,21 @@ export default function PregnancySetupScreen() {
     setIsSubmitting(true);
 
     try {
-      const parsedHeight = parseFloat(height);
+      const parsedHeight = parseFloat(height) || 165;
       const parsedWeight = parseFloat(currentWeight);
-      const parsedPreWeight = preWeight.trim() ? parseFloat(preWeight) : parsedWeight;
-      const parsedAge = motherAge.trim() ? parseInt(motherAge, 10) : undefined;
+      const parsedPreWeight = preWeight.trim() && !isNaN(parseFloat(preWeight))
+        ? parseFloat(preWeight)
+        : parsedWeight;
+      const parsedAge = motherAge.trim() && !isNaN(parseInt(motherAge, 10))
+        ? parseInt(motherAge, 10)
+        : 28;
+      const selectedBloodGroup = bloodGroup.trim() || 'O+';
+      const isoDueDate = targetDueDate.toISOString();
 
       const profilePayload = {
-        dueDate: targetDueDate.toISOString(),
+        userId: user?.id,
+        email: user?.email,
+        dueDate: isoDueDate,
         calculationMethod: calcMethod,
         currentWeek: selectedWeek,
         currentDay: selectedDay,
@@ -218,12 +226,12 @@ export default function PregnancySetupScreen() {
         pregnancyType,
         nickname: babyNickname.trim(),
 
-        // Body metrics
-        height: !isNaN(parsedHeight) ? parsedHeight : undefined,
+        // Body metrics - guaranteed non-null
+        height: parsedHeight,
         heightFt: heightFt || '',
-        currentWeight: !isNaN(parsedWeight) ? parsedWeight : undefined,
-        prePregnancyWeight: !isNaN(parsedPreWeight) ? parsedPreWeight : undefined,
-        bloodGroup: bloodGroup || undefined,
+        currentWeight: parsedWeight,
+        prePregnancyWeight: parsedPreWeight,
+        bloodGroup: selectedBloodGroup,
         motherAge: parsedAge,
 
         // Doctor & Medical
@@ -245,7 +253,7 @@ export default function PregnancySetupScreen() {
       try {
         await pregnancyApi.saveProfile(profilePayload);
       } catch (apiError: any) {
-        console.warn('Backend database save profile notification:', apiError?.message || apiError);
+        console.error('Backend database save profile notification:', apiError?.response?.data || apiError?.message || apiError);
       }
 
       // 2. Save locally to pregnancy store
@@ -262,7 +270,7 @@ export default function PregnancySetupScreen() {
           setupCompleted: true,
           isProfileCompleted: true,
           motherAge: parsedAge,
-          bloodGroup: bloodGroup || '',
+          bloodGroup: selectedBloodGroup,
         });
       }
 

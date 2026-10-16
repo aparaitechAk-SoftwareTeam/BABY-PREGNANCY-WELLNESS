@@ -1,6 +1,15 @@
 import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class SavePregnancyProfileDto {
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
   @IsOptional()
   @IsString()
   dueDate?: string;
@@ -10,18 +19,22 @@ export class SavePregnancyProfileDto {
   calculationMethod?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   currentWeek?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   currentDay?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   trimester?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   daysRemaining?: number;
 
@@ -34,6 +47,7 @@ export class SavePregnancyProfileDto {
   nickname?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   height?: number;
 
@@ -42,10 +56,12 @@ export class SavePregnancyProfileDto {
   heightFt?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   currentWeight?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   prePregnancyWeight?: number;
 
@@ -54,6 +70,7 @@ export class SavePregnancyProfileDto {
   bloodGroup?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   motherAge?: number;
 

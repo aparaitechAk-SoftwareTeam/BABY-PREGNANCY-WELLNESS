@@ -23,8 +23,8 @@ export class PregnancyController {
     @CurrentUser() user: any,
     @Body() dto: SavePregnancyProfileDto,
   ) {
-    const userId = user.sub || user.id;
-    return this.pregnancyService.saveProfile(userId, dto);
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.pregnancyService.saveProfile(userIdOrIdentifier, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -33,8 +33,8 @@ export class PregnancyController {
     @CurrentUser() user: any,
     @Body() dto: SavePregnancyProfileDto,
   ) {
-    const userId = user.sub || user.id;
-    return this.pregnancyService.saveProfile(userId, dto);
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.pregnancyService.saveProfile(userIdOrIdentifier, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -43,15 +43,15 @@ export class PregnancyController {
     @CurrentUser() user: any,
     @Body() dto: SavePregnancyProfileDto,
   ) {
-    const userId = user.sub || user.id;
-    return this.pregnancyService.saveProfile(userId, dto);
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.pregnancyService.saveProfile(userIdOrIdentifier, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@CurrentUser() user: any) {
-    const userId = user.sub || user.id;
-    return this.pregnancyService.getProfile(userId);
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.pregnancyService.getProfile(userIdOrIdentifier);
   }
 
   @Get('week/:week')

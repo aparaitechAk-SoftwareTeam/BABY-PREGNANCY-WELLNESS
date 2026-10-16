@@ -86,13 +86,24 @@ export class AuthService {
       },
     });
 
-    // If mother, create default profile
+    // If mother, create profile with safe maternal baselines
     if (user.role === Role.MOTHER) {
+      const defaultDueDate = new Date(Date.now() + 140 * 24 * 60 * 60 * 1000); // ~20 weeks out
       await (this.prisma as any).pregnancyProfile.create({
         data: {
           userId: user.id,
           currentWeek: 20,
+          currentDay: 0,
           trimester: 2,
+          daysRemaining: 140,
+          dueDate: defaultDueDate,
+          bloodGroup: 'O+',
+          prePregnancyWeight: 60.0,
+          currentWeight: 65.0,
+          height: 165.0,
+          motherAge: 28,
+          calculationMethod: 'EDD',
+          pregnancyType: 'SINGLE',
         },
       });
     }

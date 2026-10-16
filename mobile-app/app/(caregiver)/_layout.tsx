@@ -111,6 +111,13 @@ export default function CaregiverTabsLayout() {
           tabBarLabel: 'Profile',
         }}
       />
+      {/* Sub-page accessible via Dashboard & Profile, hidden from bottom tab bar */}
+      <Tabs.Screen
+        name="birth-readiness"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

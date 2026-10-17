@@ -67,14 +67,7 @@ export default function WelcomeScreen() {
           </View>
         </View>
 
-        {/* 4. Pagination Dots Indicator */}
-        <View style={styles.dotsRow}>
-          <View style={[styles.dot, styles.dotInactive]} />
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
-        </View>
-
-        {/* 5. Bottom Action: Get Started Button & Sign In Link */}
+        {/* 4. Bottom Action: Get Started Button & Sign In Link */}
         <View style={styles.actionSection}>
           <TouchableOpacity
             style={styles.getStartedBtn}
@@ -184,25 +177,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#334155',
     textAlign: 'center',
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    marginVertical: 8,
-  },
-  dot: {
-    height: 6,
-    borderRadius: 3,
-  },
-  dotActive: {
-    width: 22,
-    backgroundColor: '#E11D48',
-  },
-  dotInactive: {
-    width: 6,
-    backgroundColor: '#E2E8F0',
   },
   actionSection: {
     width: '100%',

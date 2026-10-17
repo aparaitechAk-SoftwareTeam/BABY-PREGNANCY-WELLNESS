@@ -24,6 +24,7 @@ import {
   History,
   Trash2,
 } from 'lucide-react-native';
+import { usePregnancyStore } from '../../store/pregnancy.store';
 
 interface CaregiverMember {
   id: string;
@@ -34,25 +35,6 @@ interface CaregiverMember {
   lastActive: string;
 }
 
-const INITIAL_MEMBERS: CaregiverMember[] = [
-  {
-    id: 'cg-1',
-    name: 'Rahul Sharma',
-    relation: 'Partner / Husband',
-    emailOrPhone: 'rahul.s@example.com',
-    status: 'Active',
-    lastActive: 'Active 20 mins ago',
-  },
-  {
-    id: 'cg-2',
-    name: 'Sunita Sharma',
-    relation: "Mother's Mom",
-    emailOrPhone: '+91 98200 12345',
-    status: 'Pending',
-    lastActive: 'Invite sent Oct 10',
-  },
-];
-
 interface AccessLog {
   id: string;
   user: string;
@@ -60,15 +42,25 @@ interface AccessLog {
   timeStr: string;
 }
 
-const ACCESS_AUDIT_LOGS: AccessLog[] = [
-  { id: 'al-1', user: 'Rahul Sharma', action: 'Viewed Week 24 Milestone Guide', timeStr: 'Today, 09:12 AM' },
-  { id: 'al-2', user: 'Rahul Sharma', action: 'Checked Ultrasound Appointment', timeStr: 'Yesterday, 04:30 PM' },
-  { id: 'al-3', user: 'Rahul Sharma', action: 'Received Kick Counter Complete Alert', timeStr: 'Oct 13, 08:15 PM' },
-];
-
 export default function ManageAccessScreen() {
   const router = useRouter();
-  const [members, setMembers] = useState<CaregiverMember[]>(INITIAL_MEMBERS);
+  const profile = usePregnancyStore((state) => state.profile);
+
+  const initialMembers: CaregiverMember[] = profile?.emergencyContactName
+    ? [
+        {
+          id: 'cg-emergency',
+          name: profile.emergencyContactName,
+          relation: profile.emergencyContactRelation || 'Emergency Contact / Partner',
+          emailOrPhone: profile.emergencyContactPhone || 'Configured by Mother',
+          status: 'Active',
+          lastActive: 'Connected in Profile Setup',
+        },
+      ]
+    : [];
+
+  const [members, setMembers] = useState<CaregiverMember[]>(initialMembers);
+  const [auditLogs, setAuditLogs] = useState<AccessLog[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Partner / Husband');
@@ -163,7 +155,7 @@ export default function ManageAccessScreen() {
               <Text style={styles.inputLabel}>Full Name</Text>
               <TextInput
                 style={styles.inputField}
-                placeholder="e.g. Rahul Sharma"
+                placeholder="Enter caregiver full name"
                 placeholderTextColor="#94A3B8"
                 value={inviteName}
                 onChangeText={setInviteName}
@@ -216,59 +208,69 @@ export default function ManageAccessScreen() {
         {/* Members List */}
         <Text style={styles.sectionHeading}>Current Caregivers ({members.length})</Text>
 
-        {members.map((member) => (
-          <View key={member.id} style={styles.memberCard}>
-            <View style={styles.memberTop}>
-              <View>
-                <Text style={styles.memberName}>{member.name}</Text>
-                <Text style={styles.memberRelation}>{member.relation} • {member.emailOrPhone}</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  member.status === 'Active' ? styles.statusActive : styles.statusPending,
-                ]}
-              >
-                <Text
+        {members.length === 0 ? (
+          <View style={styles.emptyCircleCard}>
+            <Users size={28} color="#94A3B8" />
+            <Text style={styles.emptyCircleTitle}>No Caregivers Linked</Text>
+            <Text style={styles.emptyCircleSub}>
+              Tap "Invite" above to share access with your partner or trusted family member.
+            </Text>
+          </View>
+        ) : (
+          members.map((member) => (
+            <View key={member.id} style={styles.memberCard}>
+              <View style={styles.memberTop}>
+                <View>
+                  <Text style={styles.memberName}>{member.name}</Text>
+                  <Text style={styles.memberRelation}>{member.relation} • {member.emailOrPhone}</Text>
+                </View>
+                <View
                   style={[
-                    styles.statusBadgeText,
-                    member.status === 'Active' ? styles.statusTextActive : styles.statusTextPending,
+                    styles.statusBadge,
+                    member.status === 'Active' ? styles.statusActive : styles.statusPending,
                   ]}
                 >
-                  {member.status}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      member.status === 'Active' ? styles.statusTextActive : styles.statusTextPending,
+                    ]}
+                  >
+                    {member.status}
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.memberMetaRow}>
-              <Clock size={12} color="#64748B" />
-              <Text style={styles.memberLastActive}>{member.lastActive}</Text>
-            </View>
+              <View style={styles.memberMetaRow}>
+                <Clock size={12} color="#64748B" />
+                <Text style={styles.memberLastActive}>{member.lastActive}</Text>
+              </View>
 
-            {/* Action buttons */}
-            <View style={styles.memberActionsRow}>
-              {member.status === 'Pending' && (
+              {/* Action buttons */}
+              <View style={styles.memberActionsRow}>
+                {member.status === 'Pending' && (
+                  <TouchableOpacity
+                    style={styles.resendBtn}
+                    onPress={() => handleResendInvite(member)}
+                    activeOpacity={0.8}
+                  >
+                    <Send size={13} color="#0284C7" />
+                    <Text style={styles.resendBtnText}>Resend Invite</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                  style={styles.resendBtn}
-                  onPress={() => handleResendInvite(member)}
+                  style={styles.revokeBtn}
+                  onPress={() => handleRevoke(member)}
                   activeOpacity={0.8}
                 >
-                  <Send size={13} color="#0284C7" />
-                  <Text style={styles.resendBtnText}>Resend Invite</Text>
+                  <Trash2 size={13} color="#DC2626" />
+                  <Text style={styles.revokeBtnText}>Revoke Access</Text>
                 </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={styles.revokeBtn}
-                onPress={() => handleRevoke(member)}
-                activeOpacity={0.8}
-              >
-                <Trash2 size={13} color="#DC2626" />
-                <Text style={styles.revokeBtnText}>Revoke Access</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
 
         {/* Audit Log Section */}
         <View style={styles.auditHeaderRow}>
@@ -277,21 +279,25 @@ export default function ManageAccessScreen() {
         </View>
 
         <View style={styles.auditCard}>
-          {ACCESS_AUDIT_LOGS.map((item, idx) => (
-            <View
-              key={item.id}
-              style={[
-                styles.auditItem,
-                idx === ACCESS_AUDIT_LOGS.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <View style={styles.auditDot} />
-              <View style={styles.auditContent}>
-                <Text style={styles.auditAction}>{item.action}</Text>
-                <Text style={styles.auditMeta}>{item.user} • {item.timeStr}</Text>
+          {auditLogs.length === 0 ? (
+            <Text style={styles.emptyAuditText}>No caregiver access events recorded yet.</Text>
+          ) : (
+            auditLogs.map((item, idx) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.auditItem,
+                  idx === auditLogs.length - 1 && { borderBottomWidth: 0 },
+                ]}
+              >
+                <View style={styles.auditDot} />
+                <View style={styles.auditContent}>
+                  <Text style={styles.auditAction}>{item.action}</Text>
+                  <Text style={styles.auditMeta}>{item.user} • {item.timeStr}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -582,5 +588,34 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: '#64748B',
     marginTop: 1,
+  },
+  emptyCircleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyCircleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  emptyCircleSub: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  emptyAuditText: {
+    fontSize: 12.5,
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
 });

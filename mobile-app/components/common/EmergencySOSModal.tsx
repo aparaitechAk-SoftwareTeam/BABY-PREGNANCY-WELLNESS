@@ -34,15 +34,22 @@ export function EmergencySOSModal({ visible, onClose }: EmergencySOSModalProps) 
   const profile = usePregnancyStore((state) => state.profile);
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
 
-  const doctorName = profile?.doctorName || 'Dr. Priya Sharma';
-  const hospitalName = profile?.hospitalName || 'Apollo Cradle Maternity Hospital';
-  const hospitalPhone = profile?.doctorPhone || '+91 98765 43210';
-  const emergencyContactName = profile?.emergencyContactName || 'Rahul Sharma (Partner)';
-  const emergencyContactPhone = profile?.emergencyContactPhone || '+91 98765 43210';
+  const doctorName = profile?.doctorName || '';
+  const hospitalName = profile?.hospitalName || '';
+  const hospitalPhone = profile?.doctorPhone || '';
+  const emergencyContactName = profile?.emergencyContactName || '';
+  const emergencyContactPhone = profile?.emergencyContactPhone || '';
   const nationalAmbulance = '108';
   const policeEmergency = '112';
 
   const handleDialNumber = (phone: string, label: string) => {
+    if (!phone) {
+      Alert.alert(
+        'Information Required',
+        `No phone number is saved for ${label}. Please add your hospital or emergency contact in your Profile Setup.`
+      );
+      return;
+    }
     const cleanNumber = phone.replace(/[^0-9+]/g, '');
     Alert.alert(
       `Emergency Call`,
@@ -109,8 +116,12 @@ export function EmergencySOSModal({ visible, onClose }: EmergencySOSModalProps) 
               </View>
               <View style={styles.callDetails}>
                 <Text style={styles.callTypeLabel}>24/7 MATERNITY HOSPITAL TRIAGE</Text>
-                <Text style={styles.callTargetName}>{hospitalName}</Text>
-                <Text style={styles.callSubInfo}>{doctorName} • {hospitalPhone}</Text>
+                <Text style={styles.callTargetName}>
+                  {hospitalName || 'No Hospital Added Yet'}
+                </Text>
+                <Text style={styles.callSubInfo}>
+                  {doctorName ? `${doctorName} • ${hospitalPhone}` : 'Tap to configure in Setup'}
+                </Text>
               </View>
               <View style={styles.callNowPill}>
                 <Text style={styles.callNowPillText}>CALL</Text>
@@ -141,7 +152,7 @@ export function EmergencySOSModal({ visible, onClose }: EmergencySOSModalProps) 
             {/* Primary Action 3: Emergency Contact / Partner */}
             <TouchableOpacity
               style={[styles.primaryCallCard, styles.contactCard]}
-              onPress={() => handleDialNumber(emergencyContactPhone, emergencyContactName)}
+              onPress={() => handleDialNumber(emergencyContactPhone, emergencyContactName || 'Primary Emergency Contact')}
               activeOpacity={0.85}
             >
               <View style={[styles.callIconCircle, { backgroundColor: '#059669' }]}>
@@ -151,8 +162,12 @@ export function EmergencySOSModal({ visible, onClose }: EmergencySOSModalProps) 
                 <Text style={[styles.callTypeLabel, { color: '#047857' }]}>
                   PRIMARY EMERGENCY CONTACT
                 </Text>
-                <Text style={styles.callTargetName}>{emergencyContactName}</Text>
-                <Text style={styles.callSubInfo}>{emergencyContactPhone}</Text>
+                <Text style={styles.callTargetName}>
+                  {emergencyContactName || 'No Contact Added Yet'}
+                </Text>
+                <Text style={styles.callSubInfo}>
+                  {emergencyContactPhone || 'Tap to configure in Setup'}
+                </Text>
               </View>
               <View style={[styles.callNowPill, { backgroundColor: '#059669' }]}>
                 <Text style={styles.callNowPillText}>CALL</Text>

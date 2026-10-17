@@ -198,37 +198,37 @@ export default function MotherProfile() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Current Weight</Text>
               <Text style={styles.detailValue}>
-                {profile?.currentWeight ? `${profile.currentWeight} kg` : '65.5 kg'}
+                {profile?.currentWeight ? `${profile.currentWeight} kg` : 'Not recorded'}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Height</Text>
               <Text style={styles.detailValue}>
-                {profile?.heightFt || (profile?.height ? `${profile.height} cm` : "5'6\"")}
+                {profile?.heightFt || (profile?.height ? `${profile.height} cm` : 'Not recorded')}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Blood Group</Text>
               <View style={styles.detailValueBadge}>
-                <Text style={styles.detailValueBadgeText}>{profile?.bloodGroup || 'O+'}</Text>
+                <Text style={styles.detailValueBadgeText}>{profile?.bloodGroup || 'Not set'}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Doctor / OB-GYN</Text>
               <Text style={styles.detailValueHighlight}>
-                {profile?.doctorName || 'Dr. Priya Sharma'}
+                {profile?.doctorName || 'Not specified yet'}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Hospital / Center</Text>
               <Text style={styles.detailValue}>
-                {profile?.hospitalName || 'Apollo Cradle Hospital'}
+                {profile?.hospitalName || 'Not specified yet'}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Doctor Contact</Text>
               <Text style={styles.detailValue}>
-                {profile?.doctorPhone || '+91 98765 43210'}
+                {profile?.doctorPhone || 'Not specified yet'}
               </Text>
             </View>
           </View>

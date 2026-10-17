@@ -159,7 +159,7 @@ export default function SupportScreen() {
           'You can edit your doctor name, hospital, and due date anytime in Profile > tap "Edit Pregnancy & Doctor Information" or via Settings.';
       } else if (lower.includes('kick') || lower.includes('movement')) {
         replyText =
-          'For kick counts, rest quietly on your left side and log each movement in the Cardiff Kick Counter (Tracking tab). If you do not count 10 movements within 2 hours, please contact Dr. Priya Sharma or your maternity clinic.';
+          'For kick counts, rest quietly on your left side and log each movement in the Cardiff Kick Counter (Tracking tab). If you do not count 10 movements within 2 hours, please contact your obstetrician or maternity clinic.';
       }
 
       const agentMsg: ChatMessage = {
@@ -218,14 +218,20 @@ export default function SupportScreen() {
           onPress={() =>
             Alert.alert(
               'Emergency Medical Contact',
-              `Primary Doctor: ${profile?.doctorName || 'Dr. Priya Sharma'}\nClinic: ${profile?.hospitalName || 'Apollo Cradle Hospital'}\nPhone: ${profile?.doctorPhone || '+91 98765 43210'}\n\nNational Emergency: 108`,
+              `Primary Doctor: ${profile?.doctorName || 'Not specified'}\nClinic: ${profile?.hospitalName || 'Not specified'}\nPhone: ${profile?.doctorPhone || 'Not specified'}\n\nNational Emergency: 108`,
               [
                 { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Call Doctor',
-                  style: 'default',
-                  onPress: () => Alert.alert('Dialing Doctor', `Calling ${profile?.doctorPhone || '+91 98765 43210'}`),
-                },
+                profile?.doctorPhone
+                  ? {
+                      text: 'Call Doctor',
+                      style: 'default',
+                      onPress: () => Alert.alert('Dialing Doctor', `Calling ${profile.doctorPhone}`),
+                    }
+                  : {
+                      text: 'Call 108',
+                      style: 'default',
+                      onPress: () => Alert.alert('Dialing Emergency', 'Calling 108'),
+                    },
               ]
             )
           }

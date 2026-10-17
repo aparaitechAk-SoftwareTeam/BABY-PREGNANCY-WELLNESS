@@ -30,14 +30,14 @@ const STORAGE_KEY = '@aparaitech_notifications_v1';
 const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'notif-1',
-    title: "Today's Clinical Consultation",
-    message: "Prenatal checkup with Dr. Priya Sharma at Apollo Cradle Maternity Hospital scheduled for 04:30 PM today.",
+    title: 'Welcome to AparaiTech',
+    message: 'Personalized clinical milestones, daily kick tracking, and routine reminders configured for you.',
     category: 'clinical',
     timestamp: new Date().toISOString(),
     timeAgo: 'Just now',
     isRead: false,
-    actionRoute: '/appointments',
-    emoji: '🚨',
+    actionRoute: '/(mother)',
+    emoji: '🌸',
     badgeColor: '#E11D48',
   },
   {

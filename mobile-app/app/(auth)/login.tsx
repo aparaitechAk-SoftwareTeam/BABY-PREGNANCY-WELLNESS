@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Heart, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../services/api/auth.api';
+import { GoogleIcon, AppleIcon } from '../../components/common';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -356,10 +357,8 @@ export default function LoginScreen() {
                 <ActivityIndicator size="small" color="#EA4335" />
               ) : (
                 <View style={styles.socialBtnContent}>
-                  <View style={styles.googleIconCircle}>
-                    <Text style={styles.googleIconLetter}>G</Text>
-                  </View>
-                  <Text style={styles.googleButtonText}>Google</Text>
+                  <GoogleIcon size={18} />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -371,14 +370,11 @@ export default function LoginScreen() {
               activeOpacity={0.85}
             >
               {socialLoading === 'apple' ? (
-                <View style={styles.loadingAppleRow}>
-                  <Text style={styles.appleLogoSmall}>􀄨</Text>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                </View>
+                <ActivityIndicator size="small" color="#000000" />
               ) : (
                 <View style={styles.socialBtnContent}>
-                  <Text style={styles.appleLogo}>􀄨</Text>
-                  <Text style={styles.appleButtonText}>Apple</Text>
+                  <AppleIcon size={18} color="#000000" />
+                  <Text style={styles.appleButtonText}>Continue with Apple</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -673,69 +669,62 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   socialButtonsContainer: {
-    flexDirection: 'row',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   googleButton: {
-    flex: 1,
+    width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 11,
+    borderRadius: 24,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-  },
-  googleIconCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  googleIconLetter: {
-    fontSize: 12.5,
-    fontWeight: '900',
-    color: '#EA4335',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   googleButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 8,
   },
   appleButton: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingVertical: 11,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  appleLogo: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginRight: 6,
-    fontWeight: 'bold',
-  },
-  appleLogoSmall: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginRight: 6,
-    fontWeight: 'bold',
-  },
-  loadingAppleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
   appleButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 8,
   },
   socialBtnContent: {
     flexDirection: 'row',

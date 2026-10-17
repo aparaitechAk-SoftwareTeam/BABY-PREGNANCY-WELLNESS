@@ -237,11 +237,11 @@ export default function ReportPreviewScreen() {
     return `APARAITECH MATERNAL CLINICAL CONSULTATION REPORT
 ═══════════════════════════════════════════════════════════
 PATIENT DETAILS:
-• Patient Name: ${user?.name || 'Ananya Sharma'}
+• Patient Name: ${user?.name || 'Mother'}
 • Gestational Age: Week ${currentWeek} of 40 (Trimester ${trimester})
-• Blood Group (Rh): ${profile?.bloodGroup || 'O Positive'}
-• Attending OB-GYN: ${profile?.doctorName || 'Dr. Priya Sharma'}
-• Clinic / Hospital: ${profile?.hospitalName || 'Apollo Cradle Maternity Hospital'}
+• Blood Group (Rh): ${profile?.bloodGroup || 'Not specified'}
+• Attending OB-GYN: ${profile?.doctorName || 'Not specified'}
+• Clinic / Hospital: ${profile?.hospitalName || 'Not specified'}
 • Report Date: ${reportDate}
 • Review Period: ${getPeriodLabel()}
 
@@ -443,11 +443,11 @@ Clinical Disclaimer: Self-reported wellness tracker for doctor consultation. Not
           <View style={styles.metaGrid}>
             <View style={styles.metaCol}>
               <Text style={styles.metaLabel}>ATTENDING OB-GYN</Text>
-              <Text style={styles.metaValue}>{profile?.doctorName || 'Dr. Priya Sharma'}</Text>
+              <Text style={styles.metaValue}>{profile?.doctorName || 'Not specified'}</Text>
             </View>
             <View style={styles.metaCol}>
               <Text style={styles.metaLabel}>MATERNITY HOSPITAL</Text>
-              <Text style={styles.metaValue}>{profile?.hospitalName || 'Apollo Cradle Hospital'}</Text>
+              <Text style={styles.metaValue}>{profile?.hospitalName || 'Not specified'}</Text>
             </View>
           </View>
 

@@ -46,44 +46,33 @@ interface PairedMember {
   };
 }
 
-const DEFAULT_MEMBERS: PairedMember[] = [
-  {
-    id: 'pm-1',
-    name: 'Rahul Sharma',
-    relationship: 'Partner / Husband',
-    status: 'Active',
-    connectedDate: 'Connected Sep 15, 2026',
-    avatarColor: '#0284C7',
-    permissions: {
-      milestones: true,
-      appointments: true,
-      kicks: true,
-      emergency: true,
-    },
-  },
-  {
-    id: 'pm-2',
-    name: 'Sunita Sharma',
-    relationship: "Mother's Mom",
-    status: 'Pending',
-    connectedDate: 'Invited Oct 10, 2026',
-    avatarColor: '#D97706',
-    permissions: {
-      milestones: true,
-      appointments: true,
-      kicks: false,
-      emergency: true,
-    },
-  },
-];
-
 export default function PartnerSyncScreen() {
   const router = useRouter();
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
   const profile = usePregnancyStore((state) => state.profile);
 
   const inviteCode = 'MOM-8492';
-  const [members, setMembers] = useState<PairedMember[]>(DEFAULT_MEMBERS);
+
+  const initialMembers: PairedMember[] = profile?.emergencyContactName
+    ? [
+        {
+          id: 'pm-emergency',
+          name: profile.emergencyContactName,
+          relationship: profile.emergencyContactRelation || 'Emergency Contact / Partner',
+          status: 'Active',
+          connectedDate: 'Configured by Mother',
+          avatarColor: '#E11D48',
+          permissions: {
+            milestones: true,
+            appointments: true,
+            kicks: true,
+            emergency: true,
+          },
+        },
+      ]
+    : [];
+
+  const [members, setMembers] = useState<PairedMember[]>(initialMembers);
   const [copied, setCopied] = useState(false);
 
   const handleCopyCode = () => {
@@ -246,8 +235,17 @@ export default function PartnerSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        {members.map((member) => (
-          <View key={member.id} style={styles.memberCard}>
+        {members.length === 0 ? (
+          <View style={styles.emptyCircleCard}>
+            <Users size={32} color="#94A3B8" />
+            <Text style={styles.emptyCircleTitle}>No Caregiver or Partner Linked</Text>
+            <Text style={styles.emptyCircleSub}>
+              Share your invite code above or add your partner/emergency contact to give them real-time updates.
+            </Text>
+          </View>
+        ) : (
+          members.map((member) => (
+            <View key={member.id} style={styles.memberCard}>
             <View style={styles.memberTopRow}>
               <View style={[styles.avatarCircle, { backgroundColor: member.avatarColor }]}>
                 <Text style={styles.avatarInitial}>{member.name.charAt(0)}</Text>
@@ -301,7 +299,7 @@ export default function PartnerSyncScreen() {
               )}
             </View>
           </View>
-        ))}
+        )))}
 
         {/* Security & Privacy Commitment */}
         <View style={styles.securityBox}>
@@ -658,5 +656,28 @@ const styles = StyleSheet.create({
   },
   securityBold: {
     fontWeight: '700',
+  },
+  emptyCircleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyCircleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  emptyCircleSub: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

@@ -60,15 +60,19 @@ export function UpcomingAppointmentAnnouncement({
 
   // Doctor & Hospital with fallbacks from mother profile
   const doctorName =
-    currentAppointment.doctorName || pregnancyProfile?.doctorName || 'Dr. Priya Sharma';
+    currentAppointment.doctorName || pregnancyProfile?.doctorName || 'Your Doctor';
   const hospitalName =
     currentAppointment.hospitalName ||
     pregnancyProfile?.hospitalName ||
-    'Apollo Cradle Maternity Hospital';
+    'Maternity Clinic';
   const doctorPhone =
-    currentAppointment.doctorPhone || pregnancyProfile?.doctorPhone || '+91 98765 43210';
+    currentAppointment.doctorPhone || pregnancyProfile?.doctorPhone || '';
 
   const handleCallClinic = () => {
+    if (!doctorPhone) {
+      Alert.alert('Phone Number Needed', 'Please add your doctor or clinic phone number in your profile.');
+      return;
+    }
     Alert.alert(
       'Call Clinic / Doctor',
       `Dial ${doctorName} at ${hospitalName} (${doctorPhone})?`,

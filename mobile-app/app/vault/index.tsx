@@ -58,8 +58,8 @@ export default function DocumentVaultScreen() {
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState<DocumentCategory>('ultrasound');
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-  const [formDoctor, setFormDoctor] = useState(profile?.doctorName || 'Dr. Priya Sharma');
-  const [formClinic, setFormClinic] = useState(profile?.hospitalName || 'Apollo Cradle Hospital');
+  const [formDoctor, setFormDoctor] = useState(profile?.doctorName || '');
+  const [formClinic, setFormClinic] = useState(profile?.hospitalName || '');
   const [formNotes, setFormNotes] = useState('');
   const [formShareWithCaregiver, setFormShareWithCaregiver] = useState(true);
 
@@ -88,8 +88,8 @@ export default function DocumentVaultScreen() {
       title: formTitle.trim(),
       category: formCategory,
       date: formDate,
-      doctorName: formDoctor.trim() || 'Dr. Priya Sharma',
-      clinicName: formClinic.trim() || 'Apollo Cradle Hospital',
+      doctorName: formDoctor.trim() || 'Not specified',
+      clinicName: formClinic.trim() || 'Not specified',
       notes: formNotes.trim() || 'Recorded during prenatal consultation.',
       fileType: 'pdf',
       fileSize: `${(Math.random() * 2 + 0.8).toFixed(1)} MB`,

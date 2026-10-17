@@ -349,7 +349,7 @@ export default function MovementTrackerScreen() {
           >
             <Phone size={14} color="#FFFFFF" />
             <Text style={styles.escalationCallText}>
-              Call Maternity Hospital ({pregnancyProfile?.doctorPhone || '+91 98765 43210'})
+              Call Maternity Hospital ({pregnancyProfile?.doctorPhone || '108'})
             </Text>
           </TouchableOpacity>
         </View>

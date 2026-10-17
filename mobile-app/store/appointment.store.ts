@@ -31,70 +31,7 @@ interface AppointmentStoreState {
   hydrate: () => Promise<void>;
 }
 
-const DEFAULT_APPOINTMENTS: Appointment[] = [
-  {
-    id: 'apt-today',
-    title: 'Routine Prenatal Consultation & Vitals',
-    type: 'Consultation',
-    doctorName: 'Dr. Priya Sharma',
-    hospitalName: 'Apollo Cradle Maternity Hospital',
-    doctorPhone: '+91 98765 43210',
-    dateStr: 'Today',
-    timeStr: '04:30 PM',
-    timestamp: Date.now() + 4 * 60 * 60 * 1000,
-    notes: 'Routine blood pressure, fundal height, and fetal heartbeat check. Bring updated kick counter log.',
-    questionsForDoctor: ['Placenta position & amniotic fluid level?', 'Remedies for nausea / acid reflux?'],
-    reminderEnabled: true,
-    reminderTiming: 'BOTH',
-    isCompleted: false,
-  },
-  {
-    id: 'apt-1',
-    title: 'Detailed Anatomy Ultrasound (Level-II Scan)',
-    type: 'Scan',
-    doctorName: 'Dr. Priya Sharma',
-    hospitalName: 'Apollo Cradle Maternity Hospital',
-    doctorPhone: '+91 98765 43210',
-    dateStr: 'Tomorrow',
-    timeStr: '10:30 AM',
-    timestamp: Date.now() + 24 * 60 * 60 * 1000,
-    notes: 'Drink 2 glasses of water 1 hour before scan. Bring previous ultrasound reports.',
-    questionsForDoctor: ['Is placenta location anterior or posterior?', 'Are amniotic fluid levels normal?'],
-    reminderEnabled: true,
-    reminderTiming: 'BOTH',
-    isCompleted: false,
-  },
-  {
-    id: 'apt-2',
-    title: 'Gestational Diabetes Glucose Screening & CBC',
-    type: 'Lab',
-    doctorName: 'Dr. Priya Sharma',
-    hospitalName: 'Apollo Cradle • Pathology Lab',
-    doctorPhone: '+91 98765 43210',
-    dateStr: 'Oct 24, 2026',
-    timeStr: '09:00 AM',
-    timestamp: Date.now() + 8 * 24 * 60 * 60 * 1000,
-    notes: 'Fasting required for 8 hours prior to test.',
-    reminderEnabled: true,
-    reminderTiming: '1_DAY_BEFORE',
-    isCompleted: false,
-  },
-  {
-    id: 'apt-3',
-    title: 'Routine 28-Week Third Trimester Checkup',
-    type: 'Routine',
-    doctorName: 'Dr. Priya Sharma',
-    hospitalName: 'Apollo Cradle Maternity Hospital',
-    doctorPhone: '+91 98765 43210',
-    dateStr: 'Nov 12, 2026',
-    timeStr: '04:00 PM',
-    timestamp: Date.now() + 26 * 24 * 60 * 60 * 1000,
-    notes: 'Routine blood pressure, fundal height, and fetal heartbeat check.',
-    reminderEnabled: true,
-    reminderTiming: 'BOTH',
-    isCompleted: false,
-  },
-];
+const DEFAULT_APPOINTMENTS: Appointment[] = [];
 
 const STORAGE_KEY = 'aparai_appointments_list';
 

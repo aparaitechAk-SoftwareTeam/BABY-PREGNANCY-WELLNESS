@@ -46,85 +46,9 @@ interface PrivacyCenterState {
 
 const STORAGE_KEY = '@aparaitech_privacy_center_v1';
 
-const INITIAL_CAREGIVERS: CaregiverAccess[] = [
-  {
-    id: 'cg-1',
-    name: 'Rahul Sharma',
-    relationship: 'Partner / Husband',
-    email: 'rahul.sharma@example.com',
-    connectedDate: 'Sep 15, 2026',
-    lastActive: '12 minutes ago',
-    device: 'iPhone 15 Pro • iOS 18',
-    permissions: {
-      vitals: true,
-      kicks: true,
-      appointments: true,
-      documents: true,
-      routine: true,
-      emergencySOS: true,
-    },
-  },
-  {
-    id: 'cg-2',
-    name: 'Sunita Sharma',
-    relationship: "Mother's Mom",
-    email: 'sunita.sharma@example.com',
-    connectedDate: 'Oct 02, 2026',
-    lastActive: 'Yesterday at 5:40 PM',
-    device: 'Samsung Galaxy S24 • Android 15',
-    permissions: {
-      vitals: false,
-      kicks: true,
-      appointments: true,
-      documents: false,
-      routine: false,
-      emergencySOS: true,
-    },
-  },
-];
+const INITIAL_CAREGIVERS: CaregiverAccess[] = [];
 
-const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [
-  {
-    id: 'log-1',
-    actorName: 'Rahul (Partner)',
-    action: 'Viewed 20-Week Anomaly Ultrasound Scan Report',
-    timestamp: 'Today at 02:15 PM',
-    category: 'document',
-    ipOrDevice: 'iPhone 15 Pro',
-  },
-  {
-    id: 'log-2',
-    actorName: 'Rahul (Partner)',
-    action: 'Checked off family task: "Pick up iron & calcium supplements"',
-    timestamp: 'Today at 09:30 AM',
-    category: 'task',
-    ipOrDevice: 'Caregiver App',
-  },
-  {
-    id: 'log-3',
-    actorName: 'Sarah (You)',
-    action: 'Exported Weekly Clinical Summary PDF to WhatsApp',
-    timestamp: 'Yesterday at 06:10 PM',
-    category: 'document',
-    ipOrDevice: 'Mother Device',
-  },
-  {
-    id: 'log-4',
-    actorName: 'Sunita Sharma (Mom)',
-    action: 'Viewed baby kick session timeline (Cardiff 10-count)',
-    timestamp: 'Yesterday at 05:40 PM',
-    category: 'tracking',
-    ipOrDevice: 'Caregiver App',
-  },
-  {
-    id: 'log-5',
-    actorName: 'System Security',
-    action: 'New device session authenticated with 2FA token',
-    timestamp: 'Oct 14, 2026 • 11:20 AM',
-    category: 'security',
-    ipOrDevice: 'Pune, Maharashtra • TLS 1.3',
-  },
-];
+const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [];
 
 export const usePrivacyStore = create<PrivacyCenterState>((set, get) => ({
   caregivers: INITIAL_CAREGIVERS,

@@ -71,18 +71,26 @@ export default function PregnancySetupScreen() {
   const user = useAuthStore((state: any) => state.user);
   const setUser = useAuthStore((state: any) => state.setUser);
 
+  const isEditingExisting = existingProfile?.setupCompleted === true;
+
   // Form Mode: 'EDD' (Estimated Due Date) or 'LMP' (Last Menstrual Period)
   const [calcMethod, setCalcMethod] = useState<'EDD' | 'LMP'>(
-    existingProfile?.calculationMethod || 'EDD'
+    isEditingExisting ? (existingProfile?.calculationMethod || 'EDD') : 'EDD'
   );
 
   // 1. Gestational Week & Timeline
-  const [selectedWeek, setSelectedWeek] = useState(existingProfile?.currentWeek || 20);
-  const [selectedDay, setSelectedDay] = useState(existingProfile?.currentDay || 0);
-  const [pregnancyType, setPregnancyType] = useState<'SINGLE' | 'TWINS' | 'MULTIPLES'>(
-    existingProfile?.pregnancyType || 'SINGLE'
+  const [selectedWeek, setSelectedWeek] = useState(
+    isEditingExisting ? (existingProfile?.currentWeek || 20) : 20
   );
-  const [babyNickname, setBabyNickname] = useState(existingProfile?.nickname || '');
+  const [selectedDay, setSelectedDay] = useState(
+    isEditingExisting ? (existingProfile?.currentDay || 0) : 0
+  );
+  const [pregnancyType, setPregnancyType] = useState<'SINGLE' | 'TWINS' | 'MULTIPLES'>(
+    isEditingExisting ? (existingProfile?.pregnancyType || 'SINGLE') : 'SINGLE'
+  );
+  const [babyNickname, setBabyNickname] = useState(
+    isEditingExisting ? (existingProfile?.nickname || '') : ''
+  );
 
   // Specific Date inputs for LMP or EDD
   const now = new Date();
@@ -92,49 +100,53 @@ export default function PregnancySetupScreen() {
 
   // 2. Mother's Physical Baseline (Height, Weight, Age, Blood)
   const [unitSystem, setUnitSystem] = useState<'METRIC' | 'IMPERIAL'>(
-    existingProfile?.preferredUnits || 'METRIC'
+    isEditingExisting ? (existingProfile?.preferredUnits || 'METRIC') : 'METRIC'
   );
   const [height, setHeight] = useState(
-    existingProfile?.height ? String(existingProfile.height) : ''
+    isEditingExisting && existingProfile?.height ? String(existingProfile.height) : ''
   );
-  const [heightFt, setHeightFt] = useState(existingProfile?.heightFt || '');
+  const [heightFt, setHeightFt] = useState(
+    isEditingExisting ? (existingProfile?.heightFt || '') : ''
+  );
   const [preWeight, setPreWeight] = useState(
-    existingProfile?.prePregnancyWeight ? String(existingProfile.prePregnancyWeight) : ''
+    isEditingExisting && existingProfile?.prePregnancyWeight ? String(existingProfile.prePregnancyWeight) : ''
   );
   const [currentWeight, setCurrentWeight] = useState(
-    existingProfile?.currentWeight ? String(existingProfile.currentWeight) : ''
+    isEditingExisting && existingProfile?.currentWeight ? String(existingProfile.currentWeight) : ''
   );
   const [motherAge, setMotherAge] = useState(
-    existingProfile?.motherAge ? String(existingProfile.motherAge) : ''
+    isEditingExisting && existingProfile?.motherAge ? String(existingProfile.motherAge) : ''
   );
-  const [bloodGroup, setBloodGroup] = useState(existingProfile?.bloodGroup || 'O+');
+  const [bloodGroup, setBloodGroup] = useState(
+    isEditingExisting ? (existingProfile?.bloodGroup || '') : ''
+  );
 
   // 3. Doctor & Medical Information
   const [doctorName, setDoctorName] = useState(
-    existingProfile?.doctorName || ''
+    isEditingExisting ? (existingProfile?.doctorName || '') : ''
   );
   const [hospitalName, setHospitalName] = useState(
-    existingProfile?.hospitalName || ''
+    isEditingExisting ? (existingProfile?.hospitalName || '') : ''
   );
   const [doctorPhone, setDoctorPhone] = useState(
-    existingProfile?.doctorPhone || ''
+    isEditingExisting ? (existingProfile?.doctorPhone || '') : ''
   );
   const [nextAppointment, setNextAppointment] = useState(
-    existingProfile?.nextAppointmentDate || ''
+    isEditingExisting ? (existingProfile?.nextAppointmentDate || '') : ''
   );
 
   // 4. Emergency Contact
   const [emergencyName, setEmergencyName] = useState(
-    existingProfile?.emergencyContactName || ''
+    isEditingExisting ? (existingProfile?.emergencyContactName || '') : ''
   );
   const [emergencyRelation, setEmergencyRelation] = useState(
-    existingProfile?.emergencyContactRelation || ''
+    isEditingExisting ? (existingProfile?.emergencyContactRelation || '') : ''
   );
   const [emergencyPhone, setEmergencyPhone] = useState(
-    existingProfile?.emergencyContactPhone || ''
+    isEditingExisting ? (existingProfile?.emergencyContactPhone || '') : ''
   );
   const [medicalNotes, setMedicalNotes] = useState(
-    existingProfile?.medicalNotes || ''
+    isEditingExisting ? (existingProfile?.medicalNotes || '') : ''
   );
 
   // Safety acknowledgment & UI state
@@ -722,7 +734,7 @@ export default function PregnancySetupScreen() {
               <Stethoscope size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Dr. Sarah Jenkins, MD (OB-GYN)"
+                placeholder="Enter doctor / OB-GYN name"
                 placeholderTextColor="#94A3B8"
                 value={doctorName}
                 onChangeText={setDoctorName}
@@ -737,7 +749,7 @@ export default function PregnancySetupScreen() {
               <Building2 size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. City Maternity Hospital"
+                placeholder="Enter hospital or maternity center name"
                 placeholderTextColor="#94A3B8"
                 value={hospitalName}
                 onChangeText={setHospitalName}
@@ -752,7 +764,7 @@ export default function PregnancySetupScreen() {
               <Phone size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. +91 98765 43210"
+                placeholder="Enter doctor / clinic phone number"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={doctorPhone}
@@ -768,7 +780,7 @@ export default function PregnancySetupScreen() {
               <Calendar size={16} color="#10B981" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Routine 20-week ultrasound"
+                placeholder="e.g. Next ultrasound date or checkup"
                 placeholderTextColor="#94A3B8"
                 value={nextAppointment}
                 onChangeText={setNextAppointment}
@@ -800,7 +812,7 @@ export default function PregnancySetupScreen() {
               <User size={16} color="#D97706" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. Partner or Family Member Name"
+                placeholder="Enter partner or family member name"
                 placeholderTextColor="#94A3B8"
                 value={emergencyName}
                 onChangeText={setEmergencyName}
@@ -841,7 +853,7 @@ export default function PregnancySetupScreen() {
               <Phone size={16} color="#D97706" style={styles.inputIcon} />
               <TextInput
                 style={styles.textInput}
-                placeholder="e.g. +91 98765 43210"
+                placeholder="Enter contact phone number"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 value={emergencyPhone}

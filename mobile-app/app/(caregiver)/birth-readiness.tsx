@@ -60,9 +60,9 @@ export default function CaregiverBirthReadinessScreen() {
   const docItems = checklist.filter((i) => i.category === 'documents');
   const docsPacked = docItems.filter((i) => i.isPacked).length;
 
-  const hospitalName = profile?.hospitalName || 'Apollo Cradle Maternity Hospital';
-  const doctorName = profile?.doctorName || 'Dr. Priya Sharma';
-  const doctorPhone = profile?.doctorPhone || '+91 98765 43210';
+  const hospitalName = profile?.hospitalName || 'Not specified by mother yet';
+  const doctorName = profile?.doctorName || 'Not specified by mother yet';
+  const doctorPhone = profile?.doctorPhone || '';
   const emergencyHotline = '+91 98765 43219';
 
   const handleCall = (num: string, label: string) => {

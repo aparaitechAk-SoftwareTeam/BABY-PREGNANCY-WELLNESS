@@ -126,14 +126,14 @@ export default function FamilyDashboardScreen() {
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Attending Doctor</Text>
               <Text style={styles.metricValue}>
-                {profile?.doctorName || 'Dr. Priya Sharma'}
+                {profile?.doctorName || 'Not specified'}
               </Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Hospital</Text>
               <Text style={styles.metricValue}>
-                {profile?.hospitalName || 'Apollo Cradle'}
+                {profile?.hospitalName || 'Not specified'}
               </Text>
             </View>
           </View>

@@ -46,6 +46,7 @@ interface PregnancyStoreState {
   setProfile: (profile: PregnancyProfile) => Promise<void>;
   setWeek: (week: number) => void;
   updateWeekAndDay: (week: number, day: number) => void;
+  resetProfile: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
 
@@ -96,6 +97,21 @@ export const usePregnancyStore = create<PregnancyStoreState>((set) => ({
       await AsyncStorage.setItem('aparai_pregnancy_profile', JSON.stringify(updatedProfile));
     } catch (error) {
       console.error('Failed to save pregnancy profile to storage:', error);
+    }
+  },
+
+  resetProfile: async () => {
+    set({
+      profile: defaultProfile,
+      currentWeek: 20,
+      currentDay: 0,
+      trimester: 2,
+      daysRemaining: 140,
+    });
+    try {
+      await AsyncStorage.removeItem('aparai_pregnancy_profile');
+    } catch (error) {
+      console.error('Failed to reset pregnancy profile:', error);
     }
   },
 

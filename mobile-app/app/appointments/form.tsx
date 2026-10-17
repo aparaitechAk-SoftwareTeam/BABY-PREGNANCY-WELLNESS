@@ -63,9 +63,9 @@ export default function AppointmentFormScreen() {
   const pregnancyProfile = usePregnancyStore((state) => state.profile);
 
   // Default values pulled from mother's onboarding profile
-  const defaultDoctor = pregnancyProfile?.doctorName || 'Dr. Priya Sharma';
-  const defaultHospital = pregnancyProfile?.hospitalName || 'Apollo Cradle Maternity Hospital';
-  const defaultPhone = pregnancyProfile?.doctorPhone || '+91 98765 43210';
+  const defaultDoctor = pregnancyProfile?.doctorName || '';
+  const defaultHospital = pregnancyProfile?.hospitalName || '';
+  const defaultPhone = pregnancyProfile?.doctorPhone || '';
 
   // Form states
   const [title, setTitle] = useState('Routine Prenatal Checkup');

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockRoleAssignments, mockPermissions } from '@/mocks/admin.mock';
+import { SYSTEM_PERMISSIONS, INITIAL_ROLE_ASSIGNMENTS } from '@/constants/permissions';
 import type { UserRole } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Shield, ShieldCheck, Plus, Edit, AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/utils/format';
 
-let roleStore = [...mockRoleAssignments];
+let roleStore = [...INITIAL_ROLE_ASSIGNMENTS];
 
 export function RoleManagement() {
   const queryClient = useQueryClient();
@@ -83,7 +83,7 @@ export function RoleManagement() {
     }));
   };
 
-  const modules = [...new Set(mockPermissions.map((p) => p.module))];
+  const modules = [...new Set(SYSTEM_PERMISSIONS.map((p) => p.module))];
   const admins = roles?.filter((r) => r.role === 'admin') || [];
   const agents = roles?.filter((r) => r.role === 'support_agent') || [];
 
@@ -200,7 +200,7 @@ export function RoleManagement() {
                   <div key={module}>
                     <p className="text-xs font-semibold text-muted-foreground mb-2">{module}</p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {mockPermissions.filter((p) => p.module === module).map((perm) => (
+                      {SYSTEM_PERMISSIONS.filter((p) => p.module === module).map((perm) => (
                         <div key={perm.id} className="flex items-center space-x-2 rounded-lg border border-border/50 p-2">
                           <Checkbox
                             id={perm.id}

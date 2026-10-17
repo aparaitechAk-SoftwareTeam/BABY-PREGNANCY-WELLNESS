@@ -14,6 +14,11 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @Get('admin/all')
+  async getAllNotifications() {
+    return this.notificationsService.getAllNotifications();
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('')
   async getNotifications(@CurrentUser() user: any) {

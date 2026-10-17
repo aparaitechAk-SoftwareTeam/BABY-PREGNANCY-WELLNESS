@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { mockSupportTickets } from '@/mocks/support.mock';
+import { ticketApi } from '@/services/ticket.api';
+import type { SupportTicket } from '@/types';
 import { User, Bell, Shield, Save, Clock, CheckCircle2, Inbox } from 'lucide-react';
 import { formatNumber, formatDate } from '@/utils/format';
 
@@ -19,11 +20,24 @@ export function SupportProfile() {
   const { toast } = useToast();
   const [notifications, setNotifications] = useState({ newTicket: true, escalation: true, ticketUpdate: true, weekly: false });
   const [timezone, setTimezone] = useState('UTC');
+  const [myTickets, setMyTickets] = useState<SupportTicket[]>([]);
 
-  const myTickets = mockSupportTickets.filter((t) => t.assignedAgentId === user?.id);
+  useState(() => {
+    (async () => {
+      try {
+        const res = await ticketApi.fetchTickets(1, 50, { assignedAgentId: user?.id });
+        if (res?.data) {
+          setMyTickets(res.data);
+        }
+      } catch {
+        // Quiet fallback
+      }
+    })();
+  });
+
   const myOpen = myTickets.filter((t) => t.status === 'open' || t.status === 'awaiting_response').length;
   const myResolved = myTickets.filter((t) => t.status === 'resolved').length;
-  const myEscalated = myTickets.filter((t) => t.status === 'escalated').length;
+  const myEscalated = myTickets.filter((t) => t.status === 'escalated' || t.escalated).length;
 
   const handleSave = () => {
     toast({ title: 'Profile Saved', description: 'Your preferences have been updated.' });

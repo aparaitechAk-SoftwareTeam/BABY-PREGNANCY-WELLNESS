@@ -79,4 +79,16 @@ export class NotificationsService {
       data: record,
     };
   }
+
+  async getAllNotifications() {
+    const records = await (this.prisma as any).notification.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return {
+      success: true,
+      data: records,
+      total: records.length,
+    };
+  }
 }

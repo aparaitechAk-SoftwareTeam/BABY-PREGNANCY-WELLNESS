@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockAnnouncements } from '@/mocks/content.mock';
+import { OFFICIAL_ANNOUNCEMENTS } from '@/constants/official-announcements';
 import type { Announcement } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Edit, Megaphone, Trash2 } from 'lucide-react';
 import { formatDateTime, formatDate } from '@/utils/format';
 
-let announcementStore = [...mockAnnouncements];
+let announcementStore = [...OFFICIAL_ANNOUNCEMENTS];
 
 export function AnnouncementList() {
   const navigate = useNavigate();

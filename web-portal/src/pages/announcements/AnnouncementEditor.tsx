@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
-import { mockAnnouncements } from '@/mocks/content.mock';
+import { OFFICIAL_ANNOUNCEMENTS } from '@/constants/official-announcements';
 
 export function AnnouncementEditor() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +20,7 @@ export function AnnouncementEditor() {
 
   useEffect(() => {
     if (isEditing) {
-      const item = mockAnnouncements.find((a) => a.id === id);
+      const item = OFFICIAL_ANNOUNCEMENTS.find((a) => a.id === id);
       if (item) { setTitle(item.title); setBody(item.body); setPublishDate(item.publishDate.split('T')[0]); }
     } else {
       setPublishDate(new Date().toISOString().split('T')[0]);

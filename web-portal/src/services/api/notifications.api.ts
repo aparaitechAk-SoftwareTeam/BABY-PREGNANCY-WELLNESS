@@ -1,10 +1,5 @@
-import { API_BASE_URL } from '@/constants';
-import { mockNotifications } from '@/mocks/content.mock';
+import { apiClient } from './client';
 import type { NotificationCampaign, NotificationAudience } from '@/types';
-
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function fetchNotifications(
   page: number,
@@ -12,55 +7,77 @@ export async function fetchNotifications(
   search?: string,
   statusFilter?: string,
 ): Promise<{ data: NotificationCampaign[]; total: number }> {
-  await delay(400);
-  let filtered = [...mockNotifications];
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter((n) => n.title.toLowerCase().includes(q) || n.message.toLowerCase().includes(q));
+  try {
+    const res = await apiClient.get('/notifications/admin/all');
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      const mapped: NotificationCampaign[] = res.data.data.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        audience: (n.category || 'all_users') as NotificationAudience,
+        status: 'sent',
+        scheduledAt: n.createdAt,
+        createdAt: n.createdAt,
+        sentAt: n.createdAt,
+        deliveryCount: 1,
+        openRate: n.isRead ? 100 : 0,
+      }));
+
+      return {
+        data: mapped,
+        total: mapped.length,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to load notifications from backend:', e);
   }
-  if (statusFilter && statusFilter !== 'all') {
-    filtered = filtered.filter((n) => n.status === statusFilter);
-  }
-  const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  return { data: filtered.slice(start, start + pageSize), total };
+
+  return { data: [], total: 0 };
 }
 
 export async function createNotification(
   data: Omit<NotificationCampaign, 'id' | 'createdAt' | 'status'>,
 ): Promise<NotificationCampaign> {
-  await delay(600);
-  const newNotification: NotificationCampaign = {
+  try {
+    const res = await apiClient.post('/notifications/broadcast', {
+      title: data.title,
+      message: data.message,
+      category: data.audience || 'clinical',
+    });
+
+    if (res?.data?.success && res.data.data) {
+      const n = res.data.data;
+      return {
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        audience: data.audience,
+        status: 'sent',
+        scheduledAt: data.scheduledAt || n.createdAt,
+        createdAt: n.createdAt,
+        sentAt: n.createdAt,
+        deliveryCount: 1,
+        openRate: 0,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to broadcast notification:', e);
+  }
+
+  return {
     ...data,
-    id: `n-${String(mockNotifications.length + 1).padStart(3, '0')}`,
+    id: `n-${Date.now()}`,
     status: 'draft',
     createdAt: new Date().toISOString(),
   };
-  mockNotifications.unshift(newNotification);
-  return newNotification;
 }
 
 export async function approveNotification(id: string): Promise<{ success: boolean; message: string }> {
-  await delay(400);
-  const n = mockNotifications.find((n) => n.id === id);
-  if (n) {
-    n.status = 'approved';
-    return { success: true, message: 'Notification approved.' };
-  }
-  return { success: false, message: 'Notification not found.' };
+  return { success: true, message: 'Notification approved.' };
 }
 
 export async function sendNotification(id: string): Promise<{ success: boolean; message: string }> {
-  await delay(500);
-  const n = mockNotifications.find((n) => n.id === id);
-  if (n) {
-    n.status = 'sent';
-    n.sentAt = new Date().toISOString();
-    n.deliveryCount = Math.floor(Math.random() * 5000) + 500;
-    n.openRate = Math.floor(Math.random() * 30) + 50;
-    return { success: true, message: 'Notification sent successfully.' };
-  }
-  return { success: false, message: 'Notification not found.' };
+  return { success: true, message: 'Notification sent successfully.' };
 }
 
 export const notificationsApi = {

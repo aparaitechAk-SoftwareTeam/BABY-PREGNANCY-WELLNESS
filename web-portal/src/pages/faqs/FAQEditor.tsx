@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
-import { mockFAQs } from '@/mocks/content.mock';
+import { OFFICIAL_FAQS } from '@/constants/official-faqs';
 
 export function FAQEditor() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export function FAQEditor() {
 
   useEffect(() => {
     if (isEditing) {
-      const faq = mockFAQs.find((f) => f.id === id);
+      const faq = OFFICIAL_FAQS.find((f) => f.id === id);
       if (faq) { setQuestion(faq.question); setAnswer(faq.answer); setCategory(faq.category); }
     }
   }, [id, isEditing]);

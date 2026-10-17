@@ -24,7 +24,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SUPPORT_NAV_ITEMS } from '@/constants';
-import { mockSupportNotifications } from '@/mocks/support.mock';
 import { timeAgo } from '@/utils/format';
 import { Fragment } from 'react';
 
@@ -37,6 +36,7 @@ export function SupportHeader({ onMobileMenuOpen }: SupportHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const notifications: any[] = [];
 
   const currentItem = SUPPORT_NAV_ITEMS.find(
     (item) => location.pathname === item.path || (item.path !== '/support-team' && location.pathname.startsWith(item.path)),
@@ -56,7 +56,7 @@ export function SupportHeader({ onMobileMenuOpen }: SupportHeaderProps) {
     }
   }
 
-  const unreadCount = mockSupportNotifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleLogout = async () => {
     await logout();
@@ -113,7 +113,7 @@ export function SupportHeader({ onMobileMenuOpen }: SupportHeaderProps) {
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>Support Notifications ({unreadCount} unread)</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {mockSupportNotifications.slice(0, 5).map((n) => (
+            {notifications.slice(0, 5).map((n) => (
               <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 py-2">
                 <div className="flex w-full items-center gap-2">
                   {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
@@ -123,6 +123,9 @@ export function SupportHeader({ onMobileMenuOpen }: SupportHeaderProps) {
                 <span className="text-[10px] text-muted-foreground">{timeAgo(n.timestamp)}</span>
               </DropdownMenuItem>
             ))}
+            {notifications.length === 0 && (
+              <div className="py-4 text-center text-xs text-muted-foreground">No new notifications</div>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="justify-center text-sm text-primary"

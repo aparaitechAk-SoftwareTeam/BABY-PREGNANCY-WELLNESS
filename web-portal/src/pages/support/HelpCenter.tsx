@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockHelpCenterArticles } from '@/mocks/support.mock';
+import { OFFICIAL_HELP_CENTER_ARTICLES } from '@/constants/help-center-data';
 import { HELP_CENTER_CATEGORIES } from '@/constants';
 import type { HelpCenterArticle } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import {
 import { Search, Headphones, Eye, ArrowUpCircle, FileText } from 'lucide-react';
 import { formatNumber } from '@/utils/format';
 
-let articleStore = [...mockHelpCenterArticles];
+let articleStore = [...OFFICIAL_HELP_CENTER_ARTICLES];
 
 export function HelpCenter() {
   const navigate = useNavigate();

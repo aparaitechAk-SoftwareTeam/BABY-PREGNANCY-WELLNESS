@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/tables/DataTableCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
-import { mockAuditLogs } from '@/mocks/admin.mock';
+import { OFFICIAL_AUDIT_LOGS } from '@/constants/official-audit-logs';
 import { Search, ScrollText, Download } from 'lucide-react';
 import { formatDateTime } from '@/utils/format';
 
@@ -19,8 +19,8 @@ export function AuditLogs() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ['auditLogs', search, resultFilter, dateFilter],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 300));
-      let filtered = [...mockAuditLogs];
+      await new Promise((r) => setTimeout(r, 200));
+      let filtered = [...OFFICIAL_AUDIT_LOGS];
       if (search) {
         const q = search.toLowerCase();
         filtered = filtered.filter((l) =>

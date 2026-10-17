@@ -5,13 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { mockSupportNotifications } from '@/mocks/support.mock';
 import type { SupportNotification } from '@/types';
 import { Ticket as TicketIcon, AlertTriangle, Bell, Info, CheckCheck } from 'lucide-react';
 import { timeAgo, formatDateTime } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
-let notificationStore = [...mockSupportNotifications];
+let notificationStore: SupportNotification[] = [];
 
 export function SupportNotifications() {
   const navigate = useNavigate();

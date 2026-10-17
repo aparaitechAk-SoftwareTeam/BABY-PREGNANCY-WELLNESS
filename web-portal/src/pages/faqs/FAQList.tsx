@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockFAQs } from '@/mocks/content.mock';
+import { OFFICIAL_FAQS } from '@/constants/official-faqs';
 import { FAQ_CATEGORIES } from '@/constants';
 import type { FAQ } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Edit, HelpCircle, Trash2, Eye, EyeOff } from 'lucide-react';
 import { formatDate } from '@/utils/format';
 
-let faqStore = [...mockFAQs];
+let faqStore = [...OFFICIAL_FAQS];
 
 export function FAQList() {
   const queryClient = useQueryClient();

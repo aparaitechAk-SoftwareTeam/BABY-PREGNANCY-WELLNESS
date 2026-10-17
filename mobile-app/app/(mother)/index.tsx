@@ -15,6 +15,10 @@ import { StatusBar } from 'expo-status-bar';
 // Global stores
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useAuthStore } from '../../store/auth.store';
+import { useStepsStore } from '../../store/steps.store';
+import { useRoutineStore } from '../../store/routine.store';
+import { useNotificationStore } from '../../store/notification.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 // Modular UI Components from components/dashboard
 import {
@@ -41,26 +45,81 @@ export default function MotherDashboard() {
   const daysRemaining = usePregnancyStore((state) => state.daysRemaining);
   const profile = usePregnancyStore((state) => state.profile);
 
+  // Realtime Stores
+  const todaySteps = useStepsStore((state) => state.todaySteps);
+  const stepGoal = useStepsStore((state) => state.stepGoal);
+  const loadTodaySteps = useStepsStore((state) => state.loadTodaySteps);
+
+  const loadTasks = useRoutineStore((state) => state.loadTasks);
+  const loadNotifications = useNotificationStore((state) => state.loadNotifications);
+
   // Local interactive tracking states
-  const [waterLoggedMl, setWaterLoggedMl] = useState(1500);
+  const [waterLoggedMl, setWaterLoggedMl] = useState(0);
+  const [sleepStats, setSleepStats] = useState({ hours: '--', quality: 'Not logged' });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showSOSModal, setShowSOSModal] = useState(false);
 
-  // Scroll to top when screen is focused
+  // Refresh all realtime data from DB
+  const refreshLiveDashboard = React.useCallback(async () => {
+    try {
+      await Promise.allSettled([
+        loadTodaySteps(),
+        loadTasks(currentWeek),
+        loadNotifications(),
+        (async () => {
+          try {
+            const res = await trackingApi.getTodaySummary();
+            const summary = res?.data;
+            if (summary) {
+              if (typeof summary.waterMl === 'number') {
+                setWaterLoggedMl(summary.waterMl);
+              }
+              if (summary.sleep) {
+                setSleepStats({
+                  hours: summary.sleep.hoursFormatted || `${Math.floor(summary.sleep.durationMinutes / 60)}h ${summary.sleep.durationMinutes % 60}m`,
+                  quality: summary.sleep.quality || 'Restful',
+                });
+              }
+            }
+          } catch (e) {
+            // Ignore offline fallback
+          }
+        })(),
+      ]);
+    } catch (e) {
+      // Quiet catch
+    }
+  }, [currentWeek, user?.id, loadTodaySteps, loadTasks, loadNotifications]);
+
+  // Scroll to top and reload live data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+      refreshLiveDashboard();
+    }, [refreshLiveDashboard])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await refreshLiveDashboard();
     setIsRefreshing(false);
   };
 
-  const handleAddWater = (amount: number) => {
+  const handleAddWater = async (amount: number) => {
     setWaterLoggedMl((prev) => Math.min(4000, prev + amount));
+    try {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      await trackingApi.logWater({
+        userId: user?.id,
+        email: user?.email,
+        amountMl: amount,
+        label: 'Quick Water',
+        timeStr,
+      });
+    } catch (e) {
+      // Ignore background sync errors
+    }
   };
 
   const handleKickCounter = () => {
@@ -141,14 +200,14 @@ export default function MotherDashboard() {
           onPressDetails={() => router.push(`/pregnancy/week/${currentWeek}` as any)}
         />
 
-        {/* 4. Today's Progress: Steps, Water, Sleep (Screen 6) */}
+        {/* 4. Today's Progress: Steps, Water, Sleep (Realtime Database Synced) */}
         <TodayProgressCards
-          stepsCurrent={3650}
-          stepsGoal={8000}
+          stepsCurrent={todaySteps}
+          stepsGoal={stepGoal}
           waterGlasses={Math.round(waterLoggedMl / 250)}
           waterGoalGlasses={10}
-          sleepHours="7h 20m"
-          sleepQuality="Restful"
+          sleepHours={sleepStats.hours}
+          sleepQuality={sleepStats.quality}
         />
 
         {/* 5. Quick Actions Grid (All 8 Essential Tools clearly visible without hidden scrolling) */}

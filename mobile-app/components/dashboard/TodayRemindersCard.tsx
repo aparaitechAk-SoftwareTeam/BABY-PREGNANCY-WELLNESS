@@ -12,7 +12,7 @@ interface TodayRemindersCardProps {
 }
 
 export function TodayRemindersCard({
-  waterLoggedMl = 1500,
+  waterLoggedMl = 0,
   waterGoalMl = 2500,
   onAddWater,
   onViewAppointments,

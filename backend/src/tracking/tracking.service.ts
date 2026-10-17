@@ -156,4 +156,165 @@ export class TrackingService {
     });
     return { success: true, data: records };
   }
+
+  // 5. STEPS
+  async upsertStepLog(userIdOrIdentifier: string, dto: any) {
+    const userId = await this.resolveUserId(userIdOrIdentifier || dto.userId, dto.email);
+    const dateStr = dto.dateStr || new Date().toISOString().slice(0, 10);
+    const steps = Number(dto.steps) || 0;
+    const goal = Number(dto.goal) || 5000;
+    const distanceKm = Number((steps * 0.00075).toFixed(2));
+    const caloriesKcal = Math.round(steps * 0.04);
+    const activeMinutes = Math.round(steps / 110);
+
+    const record = await (this.prisma as any).stepLog.upsert({
+      where: {
+        userId_dateStr: { userId, dateStr },
+      },
+      update: {
+        steps,
+        goal,
+        distanceKm,
+        caloriesKcal,
+        activeMinutes,
+      },
+      create: {
+        userId,
+        dateStr,
+        steps,
+        goal,
+        distanceKm,
+        caloriesKcal,
+        activeMinutes,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Steps recorded successfully',
+      data: record,
+    };
+  }
+
+  async getTodaySteps(userIdOrIdentifier: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const record = await (this.prisma as any).stepLog.findUnique({
+      where: {
+        userId_dateStr: { userId, dateStr },
+      },
+    });
+
+    return {
+      success: true,
+      data: record || {
+        steps: 0,
+        goal: 5000,
+        distanceKm: 0,
+        caloriesKcal: 0,
+        activeMinutes: 0,
+        dateStr,
+      },
+    };
+  }
+
+  async getStepsHistory(userIdOrIdentifier: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const records = await (this.prisma as any).stepLog.findMany({
+      where: { userId },
+      orderBy: { dateStr: 'desc' },
+      take: 14,
+    });
+    return { success: true, data: records };
+  }
+
+  // 6. SLEEP
+  async upsertSleepLog(userIdOrIdentifier: string, dto: any) {
+    const userId = await this.resolveUserId(userIdOrIdentifier || dto.userId, dto.email);
+    const dateStr = dto.dateStr || new Date().toISOString().slice(0, 10);
+    const durationMinutes = Number(dto.durationMinutes) || 0;
+    const quality = dto.quality || 'Restful';
+
+    const record = await (this.prisma as any).sleepLog.upsert({
+      where: {
+        userId_dateStr: { userId, dateStr },
+      },
+      update: {
+        durationMinutes,
+        quality,
+      },
+      create: {
+        userId,
+        dateStr,
+        durationMinutes,
+        quality,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Sleep log recorded',
+      data: record,
+    };
+  }
+
+  async getTodaySleep(userIdOrIdentifier: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const record = await (this.prisma as any).sleepLog.findUnique({
+      where: {
+        userId_dateStr: { userId, dateStr },
+      },
+    });
+
+    return {
+      success: true,
+      data: record || {
+        durationMinutes: 0,
+        quality: 'Not logged yet',
+        dateStr,
+      },
+    };
+  }
+
+  // 7. COMBINED TODAY'S DASHBOARD SUMMARY
+  async getTodaySummary(userIdOrIdentifier: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    const [steps, sleep, waterToday, latestKicks] = await Promise.all([
+      (this.prisma as any).stepLog.findUnique({ where: { userId_dateStr: { userId, dateStr } } }),
+      (this.prisma as any).sleepLog.findUnique({ where: { userId_dateStr: { userId, dateStr } } }),
+      (this.prisma as any).waterLog.findMany({
+        where: {
+          userId,
+          loggedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
+        },
+      }),
+      (this.prisma as any).kickSession.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const totalWaterMl = waterToday.reduce((acc: number, item: any) => acc + (item.amountMl || 0), 0);
+
+    return {
+      success: true,
+      data: {
+        dateStr,
+        steps: steps ? steps.steps : 0,
+        stepGoal: steps ? steps.goal : 5000,
+        distanceKm: steps ? steps.distanceKm : 0,
+        caloriesKcal: steps ? steps.caloriesKcal : 0,
+        sleepMinutes: sleep ? sleep.durationMinutes : 0,
+        sleepQuality: sleep ? sleep.quality : 'Not logged yet',
+        totalWaterMl,
+        waterGlasses: Math.round(totalWaterMl / 250),
+        latestKicks: latestKicks ? latestKicks.kicks : 0,
+      },
+    };
+  }
 }

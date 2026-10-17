@@ -13,17 +13,17 @@ interface TodayProgressCardsProps {
 }
 
 export function TodayProgressCards({
-  stepsCurrent = 3650,
-  stepsGoal = 8000,
-  waterGlasses = 5,
+  stepsCurrent = 0,
+  stepsGoal = 6000,
+  waterGlasses = 0,
   waterGoalGlasses = 8,
-  sleepHours = '7h 20m',
+  sleepHours = '--',
   sleepQuality = 'Restful',
 }: TodayProgressCardsProps) {
   const router = useRouter();
 
-  const stepsPercent = Math.min(100, Math.round((stepsCurrent / stepsGoal) * 100));
-  const waterPercent = Math.min(100, Math.round((waterGlasses / waterGoalGlasses) * 100));
+  const stepsPercent = stepsGoal > 0 ? Math.min(100, Math.round((stepsCurrent / stepsGoal) * 100)) : 0;
+  const waterPercent = waterGoalGlasses > 0 ? Math.min(100, Math.round((waterGlasses / waterGoalGlasses) * 100)) : 0;
 
   return (
     <View style={styles.container}>

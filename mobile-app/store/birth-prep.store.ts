@@ -37,34 +37,34 @@ const STORAGE_KEY = '@aparaitech_birth_prep_v1';
 
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
   // Mother's Essentials
-  { id: 'mb-1', name: 'Front-open nursing nightgowns / maternity dresses (3 sets)', category: 'mother', isPacked: true, isEssential: true },
-  { id: 'mb-2', name: 'Maternity pads / high-absorbency postpartum pads (2 packs)', category: 'mother', isPacked: true, isEssential: true },
+  { id: 'mb-1', name: 'Front-open nursing nightgowns / maternity dresses (3 sets)', category: 'mother', isPacked: false, isEssential: true },
+  { id: 'mb-2', name: 'Maternity pads / high-absorbency postpartum pads (2 packs)', category: 'mother', isPacked: false, isEssential: true },
   { id: 'mb-3', name: 'Nursing bras (non-wired) & breast pads', category: 'mother', isPacked: false, isEssential: true },
-  { id: 'mb-4', name: 'High-waisted disposable cotton panties (5-6 pairs)', category: 'mother', isPacked: true, isEssential: true },
-  { id: 'mb-5', name: 'Warm non-slip socks & comfortable room slippers', category: 'mother', isPacked: true, isEssential: false },
+  { id: 'mb-4', name: 'High-waisted disposable cotton panties (5-6 pairs)', category: 'mother', isPacked: false, isEssential: true },
+  { id: 'mb-5', name: 'Warm non-slip socks & comfortable room slippers', category: 'mother', isPacked: false, isEssential: false },
   { id: 'mb-6', name: 'Toiletries kit (toothbrush, paste, lip balm, mild soap, comb)', category: 'mother', isPacked: false, isEssential: true },
   { id: 'mb-7', name: 'Comfortable loose going-home outfit', category: 'mother', isPacked: false, isEssential: false },
 
   // Baby's Essentials
-  { id: 'bb-1', name: 'Newborn front-button onesies / jhablas (4-5 sets)', category: 'baby', isPacked: true, isEssential: true },
-  { id: 'bb-2', name: 'Soft muslin cotton swaddle wraps & receiving blankets (3)', category: 'baby', isPacked: true, isEssential: true },
+  { id: 'bb-1', name: 'Newborn front-button onesies / jhablas (4-5 sets)', category: 'baby', isPacked: false, isEssential: true },
+  { id: 'bb-2', name: 'Soft muslin cotton swaddle wraps & receiving blankets (3)', category: 'baby', isPacked: false, isEssential: true },
   { id: 'bb-3', name: 'Newborn diapers (NB / Size 0 pack) & fragrance-free wipes', category: 'baby', isPacked: false, isEssential: true },
-  { id: 'bb-4', name: 'Baby caps, mittens & soft cotton booties (3 sets)', category: 'baby', isPacked: true, isEssential: true },
+  { id: 'bb-4', name: 'Baby caps, mittens & soft cotton booties (3 sets)', category: 'baby', isPacked: false, isEssential: true },
   { id: 'bb-5', name: 'Soft baby burp cloths & bibs (4)', category: 'baby', isPacked: false, isEssential: false },
   { id: 'bb-6', name: 'Baby car seat / carry-nest for safe discharge journey', category: 'baby', isPacked: false, isEssential: true },
 
   // Partner's Essentials
-  { id: 'pb-1', name: 'Change of clothes & light jacket for hospital stay', category: 'partner', isPacked: true, isEssential: true },
-  { id: 'pb-2', name: 'Phone chargers with extra-long cables & power bank', category: 'partner', isPacked: true, isEssential: true },
+  { id: 'pb-1', name: 'Change of clothes & light jacket for hospital stay', category: 'partner', isPacked: false, isEssential: true },
+  { id: 'pb-2', name: 'Phone chargers with extra-long cables & power bank', category: 'partner', isPacked: false, isEssential: true },
   { id: 'pb-3', name: 'Light snacks (energy bars, dry fruits, glucose biscuits)', category: 'partner', isPacked: false, isEssential: false },
   { id: 'pb-4', name: 'Water bottle with straw & thermos flask', category: 'partner', isPacked: false, isEssential: false },
-  { id: 'pb-5', name: 'Hospital admission cash / credit cards for quick counter bills', category: 'partner', isPacked: true, isEssential: true },
+  { id: 'pb-5', name: 'Hospital admission cash / credit cards for quick counter bills', category: 'partner', isPacked: false, isEssential: true },
 
   // Legal & Delivery Documents
-  { id: 'db-1', name: 'Aadhaar / Government Photo ID cards (Mother & Father)', category: 'documents', isPacked: true, isEssential: true },
-  { id: 'db-2', name: 'Health Insurance / Mediclaim TPA Card & Pre-Auth letter', category: 'documents', isPacked: true, isEssential: true },
-  { id: 'db-3', name: 'Doctor’s Hospital Admission Note / Requisition slip', category: 'documents', isPacked: true, isEssential: true },
-  { id: 'db-4', name: 'Complete Pregnancy Medical File (all ultrasounds, blood tests, GTT)', category: 'documents', isPacked: true, isEssential: true },
+  { id: 'db-1', name: 'Aadhaar / Government Photo ID cards (Mother & Father)', category: 'documents', isPacked: false, isEssential: true },
+  { id: 'db-2', name: 'Health Insurance / Mediclaim TPA Card & Pre-Auth letter', category: 'documents', isPacked: false, isEssential: true },
+  { id: 'db-3', name: 'Doctor’s Hospital Admission Note / Requisition slip', category: 'documents', isPacked: false, isEssential: true },
+  { id: 'db-4', name: 'Complete Pregnancy Medical File (all ultrasounds, blood tests, GTT)', category: 'documents', isPacked: false, isEssential: true },
   { id: 'db-5', name: 'Hospital pre-booking receipt & room reservation form', category: 'documents', isPacked: false, isEssential: false },
 ];
 

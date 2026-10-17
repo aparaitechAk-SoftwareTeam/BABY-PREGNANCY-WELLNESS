@@ -36,12 +36,7 @@ interface WaterLogEntry {
   label: string;
 }
 
-const DEFAULT_ENTRIES: WaterLogEntry[] = [
-  { id: 'w1', timeStr: '08:00 AM', amountMl: 250, label: 'Morning Glass' },
-  { id: 'w2', timeStr: '10:30 AM', amountMl: 500, label: 'Mid-Morning Bottle' },
-  { id: 'w3', timeStr: '01:15 PM', amountMl: 350, label: 'Post-Lunch Hydration' },
-  { id: 'w4', timeStr: '03:45 PM', amountMl: 250, label: 'Afternoon Refresh' },
-];
+const DEFAULT_ENTRIES: WaterLogEntry[] = [];
 
 const STORAGE_KEY = 'aparai_water_tracking_v1';
 const GOAL_STORAGE_KEY = 'aparai_water_goal_v1';

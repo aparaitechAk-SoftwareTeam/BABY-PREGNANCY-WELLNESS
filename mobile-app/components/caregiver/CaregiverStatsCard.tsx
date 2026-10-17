@@ -9,9 +9,9 @@ interface CaregiverStatsCardProps {
 }
 
 export default function CaregiverStatsCard({
-  currentWeek = 20,
-  daysRemaining = 142,
-  unreadUpdates = 3,
+  currentWeek = 1,
+  daysRemaining = 280,
+  unreadUpdates = 0,
 }: CaregiverStatsCardProps) {
   return (
     <View style={styles.container}>

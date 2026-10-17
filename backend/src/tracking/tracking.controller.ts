@@ -88,4 +88,55 @@ export class TrackingController {
     const userIdOrIdentifier = user?.sub || user?.id;
     return this.trackingService.getSymptomLogs(userIdOrIdentifier);
   }
+
+  // 5. STEPS
+  @UseGuards(JwtAuthGuard)
+  @Post('steps')
+  async recordSteps(
+    @CurrentUser() user: any,
+    @Body() dto: any,
+  ) {
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.trackingService.upsertStepLog(userIdOrIdentifier, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('steps/today')
+  async getTodaySteps(@CurrentUser() user: any) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getTodaySteps(userIdOrIdentifier);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('steps/history')
+  async getStepsHistory(@CurrentUser() user: any) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getStepsHistory(userIdOrIdentifier);
+  }
+
+  // 6. SLEEP
+  @UseGuards(JwtAuthGuard)
+  @Post('sleep')
+  async recordSleep(
+    @CurrentUser() user: any,
+    @Body() dto: any,
+  ) {
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.trackingService.upsertSleepLog(userIdOrIdentifier, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sleep/today')
+  async getTodaySleep(@CurrentUser() user: any) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getTodaySleep(userIdOrIdentifier);
+  }
+
+  // 7. TODAY SUMMARY
+  @UseGuards(JwtAuthGuard)
+  @Get('today-summary')
+  async getTodaySummary(@CurrentUser() user: any) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getTodaySummary(userIdOrIdentifier);
+  }
 }

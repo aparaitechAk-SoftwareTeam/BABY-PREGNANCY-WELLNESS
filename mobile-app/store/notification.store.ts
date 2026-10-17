@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationsApi } from '../services/api/notifications.api';
 
 export interface NotificationItem {
   id: string;
@@ -27,103 +28,76 @@ interface NotificationState {
 
 const STORAGE_KEY = '@aparaitech_notifications_v1';
 
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    title: 'Welcome to AparaiTech',
-    message: 'Personalized clinical milestones, daily kick tracking, and routine reminders configured for you.',
-    category: 'clinical',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Just now',
-    isRead: false,
-    actionRoute: '/(mother)',
-    emoji: '🌸',
-    badgeColor: '#E11D48',
-  },
-  {
-    id: 'notif-2',
-    title: 'Prenatal Vitamins & Folic Acid',
-    message: 'Time for your morning vitamins with breakfast to support neural development and maternal iron levels.',
-    category: 'routine',
-    timestamp: new Date().toISOString(),
-    timeAgo: '2 hours ago',
-    isRead: false,
-    actionRoute: '/routine',
-    emoji: '💊',
-    badgeColor: '#0EA5E9',
-  },
-  {
-    id: 'notif-3',
-    title: 'Evening Kick Counting Session',
-    message: 'Peak fetal motility occurs post-dinner. Rest comfortably on your left side to track 10 movements.',
-    category: 'milestone',
-    timestamp: new Date().toISOString(),
-    timeAgo: '5 hours ago',
-    isRead: false,
-    actionRoute: '/tracking/movement',
-    emoji: '👣',
-    badgeColor: '#8B5CF6',
-  },
-  {
-    id: 'notif-4',
-    title: 'Week 20 Milestone: Halfway There! 🎉',
-    message: 'Baby is now the size of a banana (~26 cm). Taste buds are developing and baby can hear your voice!',
-    category: 'milestone',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Yesterday',
-    isRead: true,
-    actionRoute: '/pregnancy/week/20',
-    emoji: '🍌',
-    badgeColor: '#F59E0B',
-  },
-  {
-    id: 'notif-5',
-    title: 'Hydration Checkpoint',
-    message: 'Great progress! You have logged 1,750ml. Drink 2 more glasses to hit your 2,500ml daily target.',
-    category: 'routine',
-    timestamp: new Date().toISOString(),
-    timeAgo: 'Yesterday',
-    isRead: true,
-    actionRoute: '/tracking/water',
-    emoji: '💧',
-    badgeColor: '#06B6D4',
-  },
-  {
-    id: 'notif-6',
-    title: 'Partner Circle Active',
-    message: 'Caregiver (Mark) reviewed your prenatal checklist and upcoming appointment details.',
-    category: 'family',
-    timestamp: new Date().toISOString(),
-    timeAgo: '2 days ago',
-    isRead: true,
-    actionRoute: '/partner',
-    emoji: '👥',
-    badgeColor: '#10B981',
-  },
-];
+function formatTimeAgo(dateInput: string | Date): string {
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return 'Recently';
+
+  const diffMs = Date.now() - d.getTime();
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return 'Yesterday';
+  return `${diffDays}d ago`;
+}
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: DEFAULT_NOTIFICATIONS,
-  unreadCount: DEFAULT_NOTIFICATIONS.filter((n) => !n.isRead).length,
+  notifications: [],
+  unreadCount: 0,
   isLoading: false,
 
   loadNotifications: async () => {
+    set({ isLoading: true });
+
+    // 1. Fetch live notifications from Neon PostgreSQL database
     try {
-      set({ isLoading: true });
+      const res = await notificationsApi.getNotifications();
+      if (res?.data?.data && Array.isArray(res.data.data)) {
+        const mapped: NotificationItem[] = res.data.data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          category: n.category || 'clinical',
+          timestamp: n.createdAt,
+          timeAgo: formatTimeAgo(n.createdAt),
+          isRead: Boolean(n.isRead),
+          actionRoute: n.actionRoute,
+          emoji: n.emoji || '🌸',
+          badgeColor: n.badgeColor || '#E11D48',
+        }));
+
+        const unread = mapped.filter((n) => !n.isRead).length;
+        set({ notifications: mapped, unreadCount: unread, isLoading: false });
+
+        try {
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+        } catch {
+          // Ignore
+        }
+        return;
+      }
+    } catch {
+      // Offline fallback
+    }
+
+    // 2. Offline fallback to local AsyncStorage
+    try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           const unread = parsed.filter((n: NotificationItem) => !n.isRead).length;
           set({ notifications: parsed, unreadCount: unread, isLoading: false });
           return;
         }
       }
-      const unread = DEFAULT_NOTIFICATIONS.filter((n) => !n.isRead).length;
-      set({ notifications: DEFAULT_NOTIFICATIONS, unreadCount: unread, isLoading: false });
     } catch {
-      set({ notifications: DEFAULT_NOTIFICATIONS, isLoading: false });
+      // Ignore
     }
+
+    set({ notifications: [], unreadCount: 0, isLoading: false });
   },
 
   markAsRead: async (id: string) => {
@@ -135,6 +109,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
     const unread = updated.filter((n) => !n.isRead).length;
     set({ notifications: updated, unreadCount: unread });
+
+    // Sync to backend DB
+    try {
+      await notificationsApi.markAsRead(id);
+    } catch {
+      // Ignore
+    }
+
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch {
@@ -145,6 +127,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   markAllAsRead: async () => {
     const updated = get().notifications.map((n) => ({ ...n, isRead: true }));
     set({ notifications: updated, unreadCount: 0 });
+
+    // Sync to backend DB
+    try {
+      await notificationsApi.markAllAsRead();
+    } catch {
+      // Ignore
+    }
+
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch {
@@ -156,6 +146,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const updated = get().notifications.filter((n) => n.id !== id);
     const unread = updated.filter((n) => !n.isRead).length;
     set({ notifications: updated, unreadCount: unread });
+
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch {
@@ -173,6 +164,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const updated = [newItem, ...get().notifications];
     const unread = updated.filter((n) => !n.isRead).length;
     set({ notifications: updated, unreadCount: unread });
+
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch {

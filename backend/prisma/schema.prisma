@@ -38,6 +38,10 @@ model User {
   weightLogs         WeightLog[]
   symptomLogs        SymptomLog[]
   appointments       Appointment[]
+  stepLogs           StepLog[]
+  sleepLogs          SleepLog[]
+  tasks              WeeklyTask[]
+  notifications      Notification[]
 }
 
 model OtpCode {
@@ -153,5 +157,91 @@ model Appointment {
   updatedAt       DateTime @updatedAt
 
   @@index([userId, appointmentDate])
+}
+
+model StepLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps        Int      @default(0)
+  goal         Int      @default(5000)
+  distanceKm   Float    @default(0)
+  caloriesKcal Float    @default(0)
+  activeMinutes Int     @default(0)
+  dateStr      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, dateStr])
+  @@index([userId, dateStr])
+}
+
+model SleepLog {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  durationMinutes Int      @default(0)
+  quality         String   @default("Restful")
+  dateStr         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, dateStr])
+  @@index([userId, dateStr])
+}
+
+model WeeklyTask {
+  id                String   @id @default(uuid())
+  week              Int      // 1-40
+  title             String
+  category          String   // 'medication' | 'hydration' | 'exercise' | 'kicks' | 'nutrition' | 'planning'
+  timeStr           String?
+  timeOfDay         String?  // 'morning' | 'afternoon' | 'evening' | 'night'
+  emoji             String?
+  description       String?
+  clinicalRationale String?
+  isCompleted       Boolean  @default(false)
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([week, userId])
+}
+
+model PregnancyContent {
+  id             String   @id @default(uuid())
+  week           Int      // 1-40
+  title          String
+  summary        String
+  body           String?
+  category       String   @default("baby_development")
+  status         String   @default("published")
+  babySize       String?  // e.g. "Banana"
+  babyLength     String?  // e.g. "25.6 cm"
+  babyWeight     String?  // e.g. "300 g"
+  fetalHighlight String?
+  maternalTip    String?
+  author         String?  @default("Clinical Obstetric Board")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([week, status])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String?  // null = broadcast to all
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  category    String   @default("clinical")
+  isRead      Boolean  @default(false)
+  actionRoute String?
+  emoji       String?  @default("🌸")
+  badgeColor  String?  @default("#E11D48")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
 }
 

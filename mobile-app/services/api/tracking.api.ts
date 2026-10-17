@@ -1,6 +1,20 @@
 import { apiClient } from './client';
 
 export const trackingApi = {
+  // Combined dashboard today summary (steps, water, sleep, kicks)
+  getTodaySummary: () => apiClient.get('/tracking/today-summary'),
+
+  // Steps
+  getTodaySteps: () => apiClient.get('/tracking/steps/today'),
+  getStepsHistory: () => apiClient.get('/tracking/steps/history'),
+  logSteps: (data: { steps: number; goal?: number; dateStr?: string }) =>
+    apiClient.post('/tracking/steps', data),
+
+  // Sleep
+  getTodaySleep: () => apiClient.get('/tracking/sleep/today'),
+  logSleep: (data: { durationMinutes: number; quality?: string; dateStr?: string }) =>
+    apiClient.post('/tracking/sleep', data),
+
   // Kick movement tracking
   logMovement: (data: any) => apiClient.post('/tracking/kicks', data),
   getMovementHistory: () => apiClient.get('/tracking/kicks'),

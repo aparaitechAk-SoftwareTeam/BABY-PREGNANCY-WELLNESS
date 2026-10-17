@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { contentApi } from '../services/api/content.api';
 
 export interface RoutineTask {
   id: string;
   title: string;
-  category: 'medication' | 'hydration' | 'exercise' | 'kicks' | 'nutrition' | 'sleep' | 'custom';
+  category: 'medication' | 'hydration' | 'exercise' | 'kicks' | 'nutrition' | 'sleep' | 'custom' | 'planning';
   timeStr: string;
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
   emoji: string;
@@ -18,7 +19,7 @@ interface RoutineState {
   tasks: RoutineTask[];
   currentDateStr: string;
   isLoading: boolean;
-  loadTasks: () => Promise<void>;
+  loadTasks: (week?: number) => Promise<void>;
   toggleTask: (id: string) => Promise<void>;
   addTask: (task: Omit<RoutineTask, 'id' | 'isCompleted'>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
@@ -37,8 +38,7 @@ const DEFAULT_ROUTINE_TASKS: RoutineTask[] = [
     timeOfDay: 'morning',
     emoji: '💊',
     description: 'Essential micronutrients & neural tube support. Take with breakfast.',
-    isCompleted: true,
-    completedAt: '08:45 AM',
+    isCompleted: false,
     clinicalRationale: 'Folic acid and iron absorption is maximized when taken with breakfast or citrus juice.',
   },
   {
@@ -49,8 +49,7 @@ const DEFAULT_ROUTINE_TASKS: RoutineTask[] = [
     timeOfDay: 'morning',
     emoji: '💧',
     description: 'Amniotic fluid maintenance & prevents maternal UTIs.',
-    isCompleted: true,
-    completedAt: '11:15 AM',
+    isCompleted: false,
     clinicalRationale: 'Maintains optimal blood volume expansion and amniotic fluid index (AFI).',
   },
   {
@@ -115,100 +114,148 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
   currentDateStr: new Date().toISOString().split('T')[0],
   isLoading: false,
 
-  loadTasks: async () => {
-    try {
-      set({ isLoading: true });
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const todayStr = new Date().toISOString().split('T')[0];
+  loadTasks: async (week = 20) => {
+    set({ isLoading: true });
+    const todayStr = new Date().toISOString().split('T')[0];
 
+    // 1. Try fetching database tasks for this week
+    try {
+      const res = await contentApi.getTasksByWeek(week);
+      if (res?.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        const mapped: RoutineTask[] = res.data.data.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          category: t.category || 'custom',
+          timeStr: t.timeStr || '',
+          timeOfDay: t.timeOfDay || 'morning',
+          emoji: t.emoji || '📋',
+          description: t.description || '',
+          isCompleted: t.isCompleted || false,
+          clinicalRationale: t.clinicalRationale,
+        }));
+        set({ tasks: mapped, currentDateStr: todayStr, isLoading: false });
+        return;
+      }
+    } catch {
+      // Deferred sync
+    }
+
+    // 2. Local AsyncStorage fallback
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // If stored tasks are from today, use them; otherwise keep tasks with reset completion
         if (parsed.date === todayStr && Array.isArray(parsed.tasks)) {
           set({ tasks: parsed.tasks, currentDateStr: todayStr, isLoading: false });
           return;
         } else if (Array.isArray(parsed.tasks)) {
-          // New day: reset completion statuses
           const resetTasks = parsed.tasks.map((t: RoutineTask) => ({
             ...t,
             isCompleted: false,
             completedAt: undefined,
           }));
           set({ tasks: resetTasks, currentDateStr: todayStr, isLoading: false });
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, tasks: resetTasks }));
           return;
         }
       }
-
-      set({ tasks: DEFAULT_ROUTINE_TASKS, currentDateStr: todayStr, isLoading: false });
-      await AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ date: todayStr, tasks: DEFAULT_ROUTINE_TASKS })
-      );
     } catch {
-      set({ tasks: DEFAULT_ROUTINE_TASKS, isLoading: false });
+      // Ignore
     }
+
+    set({ tasks: DEFAULT_ROUTINE_TASKS, currentDateStr: todayStr, isLoading: false });
   },
 
   toggleTask: async (id: string) => {
-    const updated = get().tasks.map((task) => {
+    const todayStr = get().currentDateStr;
+    const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let targetCompleted = false;
+
+    const updatedTasks = get().tasks.map((task) => {
       if (task.id === id) {
-        const willComplete = !task.isCompleted;
+        const nextState = !task.isCompleted;
+        targetCompleted = nextState;
         return {
           ...task,
-          isCompleted: willComplete,
-          completedAt: willComplete
-            ? new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-            : undefined,
+          isCompleted: nextState,
+          completedAt: nextState ? nowTimeStr : undefined,
         };
       }
       return task;
     });
 
-    set({ tasks: updated });
+    set({ tasks: updatedTasks });
+
+    // Sync to backend DB
     try {
-      const todayStr = get().currentDateStr;
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, tasks: updated }));
+      await contentApi.toggleTask(id, targetCompleted);
     } catch {
-      // Ignore async storage failures gracefully
+      // Offline fallback
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ date: todayStr, tasks: updatedTasks })
+      );
+    } catch (error) {
+      console.error('Failed to save routine tasks to storage:', error);
     }
   },
 
   addTask: async (taskData) => {
+    const todayStr = get().currentDateStr;
     const newTask: RoutineTask = {
       ...taskData,
-      id: `task-${Date.now()}`,
+      id: `task-custom-${Date.now()}`,
       isCompleted: false,
     };
-    const updated = [...get().tasks, newTask];
-    set({ tasks: updated });
+
+    const updatedTasks = [...get().tasks, newTask];
+    set({ tasks: updatedTasks });
+
     try {
-      const todayStr = get().currentDateStr;
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, tasks: updated }));
-    } catch {
-      // Ignore
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ date: todayStr, tasks: updatedTasks })
+      );
+    } catch (error) {
+      console.error('Failed to add custom routine task:', error);
     }
   },
 
   deleteTask: async (id: string) => {
-    const updated = get().tasks.filter((t) => t.id !== id);
-    set({ tasks: updated });
+    const todayStr = get().currentDateStr;
+    const updatedTasks = get().tasks.filter((t) => t.id !== id);
+    set({ tasks: updatedTasks });
+
     try {
-      const todayStr = get().currentDateStr;
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, tasks: updated }));
-    } catch {
-      // Ignore
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ date: todayStr, tasks: updatedTasks })
+      );
+    } catch (error) {
+      console.error('Failed to delete routine task:', error);
     }
   },
 
   resetTodayTasks: async () => {
-    const reset = get().tasks.map((t) => ({ ...t, isCompleted: false, completedAt: undefined }));
-    set({ tasks: reset });
+    const todayStr = get().currentDateStr;
+    const resetTasks = get().tasks.map((t) => ({
+      ...t,
+      isCompleted: false,
+      completedAt: undefined,
+    }));
+
+    set({ tasks: resetTasks });
+
     try {
-      const todayStr = get().currentDateStr;
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayStr, tasks: reset }));
-    } catch {
-      // Ignore
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ date: todayStr, tasks: resetTasks })
+      );
+    } catch (error) {
+      console.error('Failed to reset daily routine tasks:', error);
     }
   },
 

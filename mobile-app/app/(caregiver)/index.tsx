@@ -18,6 +18,7 @@ import { useRoutineStore } from '../../store/routine.store';
 import { useStepsStore } from '../../store/steps.store';
 import { useFamilyTasksStore } from '../../store/family-tasks.store';
 import { useBirthPrepStore } from '../../store/birth-prep.store';
+import { useNotificationStore } from '../../store/notification.store';
 import {
   CaregiverStatsCard,
   CaregiverStatusBanner,
@@ -54,18 +55,28 @@ export default function CaregiverHome() {
   const birthStats = useBirthPrepStore((state) => state.getStats());
   const loadBirthPrepData = useBirthPrepStore((state) => state.loadBirthPrepData);
   const toggleItemPacked = useBirthPrepStore((state) => state.toggleItemPacked);
+  const unreadUpdates = useNotificationStore((state) => state.unreadCount);
+
+  const refreshCaregiverData = React.useCallback(async () => {
+    await Promise.allSettled([
+      loadBirthPrepData(),
+      useStepsStore.getState().loadTodaySteps(),
+      useRoutineStore.getState().loadTasks(currentWeek),
+      useNotificationStore.getState().loadNotifications(),
+    ]);
+  }, [currentWeek, loadBirthPrepData]);
 
   // Scroll to top and refresh when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      loadBirthPrepData();
+      refreshCaregiverData();
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, [refreshCaregiverData])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await refreshCaregiverData();
     setIsRefreshing(false);
   };
 
@@ -166,7 +177,9 @@ export default function CaregiverHome() {
             <View style={styles.motherNameSection}>
               <Text style={styles.motherNameLabel}>Mother</Text>
               <Text style={styles.motherName}>
-                {pregnancyProfile?.nickname ? `${pregnancyProfile.nickname}'s Mother` : 'Sarah Anderson'}
+                {pregnancyProfile?.nickname
+                  ? `${pregnancyProfile.nickname}'s Mother`
+                  : user?.partnerName || 'Mother'}
               </Text>
             </View>
           </View>
@@ -174,18 +187,18 @@ export default function CaregiverHome() {
           <View style={styles.motherStatsRow}>
             <View style={styles.motherStatBox}>
               <Text style={styles.motherStatLabel}>Current Week</Text>
-              <Text style={styles.motherStatValue}>{currentWeek || 20}</Text>
+              <Text style={styles.motherStatValue}>{currentWeek || '--'}</Text>
             </View>
             <View style={styles.motherStatBox}>
               <Text style={styles.motherStatLabel}>Weight</Text>
               <Text style={styles.motherStatValue}>
-                {pregnancyProfile?.currentWeight ? `${pregnancyProfile.currentWeight} kg` : '65.5 kg'}
+                {pregnancyProfile?.currentWeight ? `${pregnancyProfile.currentWeight} kg` : '--'}
               </Text>
             </View>
             <View style={styles.motherStatBox}>
               <Text style={styles.motherStatLabel}>Height</Text>
               <Text style={styles.motherStatValue}>
-                {pregnancyProfile?.heightFt || (pregnancyProfile?.height ? `${pregnancyProfile.height} cm` : "5'6\"")}
+                {pregnancyProfile?.heightFt || (pregnancyProfile?.height ? `${pregnancyProfile.height} cm` : '--')}
               </Text>
             </View>
           </View>
@@ -194,7 +207,7 @@ export default function CaregiverHome() {
             <View style={styles.motherDetailItem}>
               <Text style={styles.motherDetailLabel}>Age</Text>
               <Text style={styles.motherDetailValue}>
-                {pregnancyProfile?.motherAge ? `${pregnancyProfile.motherAge} years` : '28 years'}
+                {pregnancyProfile?.motherAge ? `${pregnancyProfile.motherAge} years` : '--'}
               </Text>
             </View>
             <View style={styles.motherDetailItem}>
@@ -206,12 +219,12 @@ export default function CaregiverHome() {
                       day: 'numeric',
                       year: 'numeric',
                     })
-                  : 'Sep 15, 2026'}
+                  : 'Not set'}
               </Text>
             </View>
             <View style={styles.motherDetailItem}>
               <Text style={styles.motherDetailLabel}>Blood Type</Text>
-              <Text style={styles.motherDetailValue}>{pregnancyProfile?.bloodGroup || 'O+'}</Text>
+              <Text style={styles.motherDetailValue}>{pregnancyProfile?.bloodGroup || '--'}</Text>
             </View>
           </View>
 
@@ -229,9 +242,9 @@ export default function CaregiverHome() {
 
         {/* Stats Card */}
         <CaregiverStatsCard
-          currentWeek={currentWeek || 20}
-          daysRemaining={daysRemaining || 140}
-          unreadUpdates={3}
+          currentWeek={currentWeek || 1}
+          daysRemaining={daysRemaining || 280}
+          unreadUpdates={unreadUpdates}
         />
 
         {/* Mother's Daily Routine & Habits Monitoring */}

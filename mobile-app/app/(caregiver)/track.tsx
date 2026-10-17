@@ -34,16 +34,21 @@ export default function CaregiverTrack() {
   const caloriesKcal = useStepsStore((state) => state.caloriesKcal);
   const stepPercentage = stepGoal > 0 ? Math.min(100, Math.round((todaySteps / stepGoal) * 100)) : 0;
 
-  // Scroll to top when screen is focused
+  // Scroll to top and refresh when screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      useStepsStore.getState().loadTodaySteps();
+      useRoutineStore.getState().loadTasks(currentWeek);
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, [currentWeek])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await Promise.allSettled([
+      useStepsStore.getState().loadTodaySteps(),
+      useRoutineStore.getState().loadTasks(currentWeek),
+    ]);
     setIsRefreshing(false);
   };
 
@@ -147,7 +152,7 @@ export default function CaregiverTrack() {
             <View style={styles.vitalInfo}>
               <Text style={styles.vitalLabel}>Weight & BP</Text>
               <Text style={styles.vitalValue}>
-                {profile?.currentWeight ? `${profile.currentWeight} kg` : '65.5 kg'} • 120/80 mmHg
+                {profile?.currentWeight ? `${profile.currentWeight} kg` : '--'} • 120/80 mmHg
               </Text>
               <Text style={styles.vitalTime}>Healthy gestational range</Text>
             </View>

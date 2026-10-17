@@ -160,7 +160,10 @@ export default function CaregiverHome() {
         </View>
 
         {/* Status Banner */}
-        <CaregiverStatusBanner motherName="Mother" connectionStatus="connected" />
+        <CaregiverStatusBanner
+          motherName={pregnancyProfile?.nickname ? `${pregnancyProfile.nickname}'s Mother` : user?.partnerName || 'Mother'}
+          connectionStatus="connected"
+        />
 
         {/* Top Horizontal Appointment Announcement (Today / Upcoming) */}
         <UpcomingAppointmentAnnouncement

@@ -64,9 +64,7 @@ const INITIAL_FAMILY_TASKS: FamilyTask[] = [
     priority: 'medium',
     dueDate: 'Tomorrow',
     notes: 'Prescription is uploaded in the Medical Vault. Check doctor notes for 100mg dosage.',
-    isCompleted: true,
-    completedAt: 'Yesterday at 6:30 PM',
-    completedBy: 'Partner / Caregiver',
+    isCompleted: false,
     createdAt: new Date().toISOString(),
   },
   {

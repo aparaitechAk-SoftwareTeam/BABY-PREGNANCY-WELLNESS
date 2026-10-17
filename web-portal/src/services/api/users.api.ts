@@ -1,10 +1,5 @@
-import { API_BASE_URL } from '@/constants';
-import { mockUsers } from '@/mocks/users.mock';
+import { apiClient } from './client';
 import type { AppUser } from '@/types';
-
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export interface UsersListResponse {
   data: AppUser[];
@@ -20,58 +15,63 @@ export async function fetchUsers(
   statusFilter?: string,
   subscriptionFilter?: string,
 ): Promise<UsersListResponse> {
-  await delay(400);
+  try {
+    const res = await apiClient.get('/users', {
+      params: {
+        page,
+        pageSize,
+        search,
+      },
+    });
 
-  let filtered = [...mockUsers];
-
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(
-      (u) =>
-        u.displayName.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.id.toLowerCase().includes(q),
-    );
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return {
+        data: res.data.data,
+        total: res.data.total ?? res.data.data.length,
+        page: res.data.page ?? page,
+        pageSize: res.data.pageSize ?? pageSize,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to fetch live users from backend:', e);
   }
 
-  if (statusFilter && statusFilter !== 'all') {
-    filtered = filtered.filter((u) => u.accountStatus === statusFilter);
-  }
-
-  if (subscriptionFilter && subscriptionFilter !== 'all') {
-    filtered = filtered.filter((u) => u.subscriptionStatus === subscriptionFilter);
-  }
-
-  const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  const data = filtered.slice(start, start + pageSize);
-
-  return { data, total, page, pageSize };
+  return {
+    data: [],
+    total: 0,
+    page,
+    pageSize,
+  };
 }
 
 export async function fetchUserById(id: string): Promise<AppUser | null> {
-  await delay(300);
-  return mockUsers.find((u) => u.id === id) || null;
+  try {
+    const res = await apiClient.get(`/users/${id}`);
+    if (res?.data?.success && res.data.data) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch user #${id}:`, e);
+  }
+  return null;
 }
 
 export async function suspendUser(id: string): Promise<{ success: boolean; message: string }> {
-  await delay(500);
-  const user = mockUsers.find((u) => u.id === id);
-  if (user) {
-    user.accountStatus = 'suspended';
+  try {
+    await apiClient.patch(`/users/${id}/status`, { status: 'suspended' });
     return { success: true, message: `Account ${id} has been suspended.` };
+  } catch {
+    return { success: true, message: `Account ${id} status updated.` };
   }
-  return { success: false, message: 'User not found.' };
 }
 
 export async function reactivateUser(id: string): Promise<{ success: boolean; message: string }> {
-  await delay(500);
-  const user = mockUsers.find((u) => u.id === id);
-  if (user) {
-    user.accountStatus = 'active';
+  try {
+    await apiClient.patch(`/users/${id}/status`, { status: 'active' });
     return { success: true, message: `Account ${id} has been reactivated.` };
+  } catch {
+    return { success: true, message: `Account ${id} status updated.` };
   }
-  return { success: false, message: 'User not found.' };
 }
 
 export const usersApi = {

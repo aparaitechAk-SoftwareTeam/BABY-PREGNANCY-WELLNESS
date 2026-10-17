@@ -5,6 +5,8 @@ import { TrackingModule } from './tracking/tracking.module';
 
 import { NotificationsModule } from './notifications/notifications.module';
 import { PregnancyContentModule } from './pregnancy-content/pregnancy-content.module';
+import { UsersModule } from './users/users.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { PregnancyContentModule } from './pregnancy-content/pregnancy-content.mo
     TrackingModule,
     NotificationsModule,
     PregnancyContentModule,
+    UsersModule,
+    SupportModule,
   ],
   controllers: [],
   providers: [],

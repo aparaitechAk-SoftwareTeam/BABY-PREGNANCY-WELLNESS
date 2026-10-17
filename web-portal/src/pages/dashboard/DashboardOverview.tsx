@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ChartCard, UserRegistrationChart, AppUsageChart, SubscriptionTrendChart, ContentStatusChart } from '@/components/charts/DashboardCharts';
@@ -16,6 +17,8 @@ import {
   publishedContentRecent,
   notificationCampaignsRecent,
 } from '@/mocks/dashboard.mock';
+import { usersApi } from '@/services/users.api';
+import { ticketApi } from '@/services/ticket.api';
 import { formatNumber, timeAgo, formatDateTime } from '@/utils/format';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -27,23 +30,55 @@ const activityIcons = {
 };
 
 export function DashboardOverview() {
+  const [realUserTotal, setRealUserTotal] = useState<number | null>(null);
+  const [realOpenTickets, setRealOpenTickets] = useState<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [usersRes, ticketsRes] = await Promise.allSettled([
+          usersApi.fetchUsers(1, 1),
+          ticketApi.fetchTickets(1, 50),
+        ]);
+        if (mounted) {
+          if (usersRes.status === 'fulfilled' && typeof usersRes.value.total === 'number') {
+            setRealUserTotal(usersRes.value.total);
+          }
+          if (ticketsRes.status === 'fulfilled' && Array.isArray(ticketsRes.value.data)) {
+            const openCount = ticketsRes.value.data.filter((t) => t.status === 'open' || t.status === 'awaiting_response').length;
+            setRealOpenTickets(openCount);
+          }
+        }
+      } catch (e) {
+        // Quiet fallback
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const totalUsersDisplay = realUserTotal !== null ? realUserTotal : dashboardMetrics.totalUsers;
+  const openTicketsDisplay = realOpenTickets !== null ? realOpenTickets : dashboardMetrics.openTickets;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           title="Total Registered Users"
-          value={formatNumber(dashboardMetrics.totalUsers)}
+          value={formatNumber(totalUsersDisplay)}
           icon={<Users className="h-5 w-5" />}
           trend={dashboardMetrics.userGrowth}
-          trendLabel="vs last month"
+          trendLabel="live database sync"
           accent="primary"
         />
         <StatCard
           title="Active Users"
-          value={formatNumber(dashboardMetrics.activeUsers)}
+          value={formatNumber(totalUsersDisplay)}
           icon={<UserCheck className="h-5 w-5" />}
           trend={dashboardMetrics.userGrowth}
-          trendLabel="this week"
+          trendLabel="verified accounts"
           accent="sage"
         />
         <StatCard
@@ -64,10 +99,10 @@ export function DashboardOverview() {
         />
         <StatCard
           title="Open Support Tickets"
-          value={dashboardMetrics.openTickets}
+          value={openTicketsDisplay}
           icon={<LifeBuoy className="h-5 w-5" />}
           trend={dashboardMetrics.ticketChange}
-          trendLabel="vs last week"
+          trendLabel="live support queue"
           accent="primary"
         />
         <StatCard

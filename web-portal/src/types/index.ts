@@ -21,6 +21,7 @@ export interface AppUser {
   subscriptionStatus: SubscriptionStatus;
   subscriptionPlan?: string;
   weekOfPregnancy?: number;
+  role?: string;
 }
 
 export type ContentStatus = 'draft' | 'review' | 'published';
@@ -95,6 +96,7 @@ export type TicketCategory = 'login' | 'notifications' | 'billing' | 'app_usage'
 
 export interface SupportTicket {
   id: string;
+  ticketNumber?: string;
   subject: string;
   user: string;
   userEmail: string;

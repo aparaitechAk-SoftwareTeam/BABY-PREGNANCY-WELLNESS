@@ -1,12 +1,5 @@
-import { mockSupportTickets, mockTicketMessages } from '@/mocks/support.mock';
+import { apiClient } from './client';
 import type { SupportTicket, TicketMessage, TicketStatus, TicketPriority } from '@/types';
-
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-let ticketStore = [...mockSupportTickets];
-let messageStore = [...mockTicketMessages];
 
 export interface TicketListResponse {
   data: SupportTicket[];
@@ -25,66 +18,99 @@ export async function fetchTickets(
     unassignedOnly?: boolean;
   },
 ): Promise<TicketListResponse> {
-  await delay(400);
-  let filtered = [...ticketStore];
+  try {
+    const res = await apiClient.get('/support/tickets', {
+      params: {
+        page,
+        pageSize,
+        search: filters?.search,
+        status: filters?.status,
+        priority: filters?.priority,
+        category: filters?.category,
+        assignedAgentId: filters?.assignedAgentId,
+        unassignedOnly: filters?.unassignedOnly,
+      },
+    });
 
-  if (filters?.search) {
-    const q = filters.search.toLowerCase();
-    filtered = filtered.filter(
-      (t) =>
-        t.subject.toLowerCase().includes(q) ||
-        t.user.toLowerCase().includes(q) ||
-        t.userEmail.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q),
-    );
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return {
+        data: res.data.data,
+        total: res.data.total ?? res.data.data.length,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to fetch live tickets from backend:', e);
   }
 
-  if (filters?.status && filters.status !== 'all') {
-    filtered = filtered.filter((t) => t.status === filters.status);
-  }
-
-  if (filters?.priority && filters.priority !== 'all') {
-    filtered = filtered.filter((t) => t.priority === filters.priority);
-  }
-
-  if (filters?.category && filters.category !== 'all') {
-    filtered = filtered.filter((t) => t.category === filters.category);
-  }
-
-  if (filters?.assignedAgentId) {
-    filtered = filtered.filter((t) => t.assignedAgentId === filters.assignedAgentId);
-  }
-
-  if (filters?.unassignedOnly) {
-    filtered = filtered.filter((t) => t.status === 'unassigned' || !t.assignedAgentId);
-  }
-
-  const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  const data = filtered.slice(start, start + pageSize);
-
-  return { data, total };
+  return {
+    data: [],
+    total: 0,
+  };
 }
 
 export async function fetchTicketById(id: string): Promise<SupportTicket | null> {
-  await delay(300);
-  return ticketStore.find((t) => t.id === id) || null;
+  try {
+    const res = await apiClient.get(`/support/tickets/${id}`);
+    if (res?.data?.success && res.data.data) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch ticket #${id}:`, e);
+  }
+  return null;
 }
 
 export async function fetchTicketMessages(ticketId: string): Promise<TicketMessage[]> {
-  await delay(300);
-  return messageStore.filter((m) => m.ticketId === ticketId).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  try {
+    const res = await apiClient.get(`/support/tickets/${ticketId}`);
+    if (res?.data?.success && res.data.data?.messages) {
+      return res.data.data.messages.map((m: any) => ({
+        id: m.id,
+        ticketId: m.ticketId,
+        author: m.senderName,
+        authorRole: m.senderRole,
+        content: m.message,
+        timestamp: m.createdAt,
+        isInternal: false,
+      }));
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch ticket messages #${ticketId}:`, e);
+  }
+  return [];
 }
 
 export async function sendTicketMessage(
   ticketId: string,
   content: string,
   author: string,
-  isInternal: boolean,
+  isInternal: boolean = false,
 ): Promise<TicketMessage> {
-  await delay(400);
-  const message: TicketMessage = {
-    id: `msg-${String(messageStore.length + 1).padStart(3, '0')}`,
+  try {
+    const res = await apiClient.post(`/support/tickets/${ticketId}/messages`, {
+      message: content,
+      senderName: author,
+      senderRole: 'support',
+    });
+
+    if (res?.data?.success && res.data.data) {
+      const d = res.data.data;
+      return {
+        id: d.id,
+        ticketId: d.ticketId,
+        author: d.senderName,
+        authorRole: d.senderRole,
+        content: d.message,
+        timestamp: d.createdAt,
+        isInternal,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to send live ticket message:', e);
+  }
+
+  return {
+    id: 'msg-' + Date.now(),
     ticketId,
     author,
     authorRole: 'agent',
@@ -92,69 +118,64 @@ export async function sendTicketMessage(
     timestamp: new Date().toISOString(),
     isInternal,
   };
-  messageStore.push(message);
-
-  const ticket = ticketStore.find((t) => t.id === ticketId);
-  if (ticket) {
-    ticket.updatedAt = new Date().toISOString();
-    if (isInternal && ticket.status === 'open') {
-      // Keep status as open for internal notes
-    } else if (!isInternal) {
-      ticket.status = 'awaiting_response';
-    }
-  }
-
-  return message;
 }
 
-export async function assignTicket(ticketId: string, agentId: string, agentName: string): Promise<{ success: boolean; message: string }> {
-  await delay(400);
-  const ticket = ticketStore.find((t) => t.id === ticketId);
-  if (ticket) {
-    ticket.assignedAgentId = agentId;
-    ticket.assignedAgent = agentName;
-    if (ticket.status === 'unassigned') {
-      ticket.status = 'open';
-    }
-    ticket.updatedAt = new Date().toISOString();
+export async function assignTicket(
+  ticketId: string,
+  agentId: string,
+  agentName: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await apiClient.patch(`/support/tickets/${ticketId}`, {
+      assignedAgentId: agentId,
+      assignedAgent: agentName,
+      status: 'open',
+    });
     return { success: true, message: `Ticket ${ticketId} assigned to ${agentName}.` };
+  } catch {
+    return { success: false, message: 'Failed to assign ticket.' };
   }
-  return { success: false, message: 'Ticket not found.' };
 }
 
-export async function updateTicketStatus(ticketId: string, status: TicketStatus): Promise<{ success: boolean; message: string }> {
-  await delay(300);
-  const ticket = ticketStore.find((t) => t.id === ticketId);
-  if (ticket) {
-    ticket.status = status;
-    ticket.updatedAt = new Date().toISOString();
-    return { success: true, message: `Ticket status updated to ${status.replace(/_/g, ' ')}.` };
+export async function updateTicketStatus(
+  ticketId: string,
+  status: TicketStatus,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await apiClient.patch(`/support/tickets/${ticketId}`, { status });
+    return { success: true, message: `Ticket status updated to ${status}.` };
+  } catch {
+    return { success: false, message: 'Failed to update ticket status.' };
   }
-  return { success: false, message: 'Ticket not found.' };
 }
 
-export async function updateTicketPriority(ticketId: string, priority: TicketPriority): Promise<{ success: boolean; message: string }> {
-  await delay(300);
-  const ticket = ticketStore.find((t) => t.id === ticketId);
-  if (ticket) {
-    ticket.priority = priority;
-    ticket.updatedAt = new Date().toISOString();
+export async function updateTicketPriority(
+  ticketId: string,
+  priority: TicketPriority,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await apiClient.patch(`/support/tickets/${ticketId}`, { priority });
     return { success: true, message: `Ticket priority updated to ${priority}.` };
+  } catch {
+    return { success: false, message: 'Failed to update ticket priority.' };
   }
-  return { success: false, message: 'Ticket not found.' };
 }
 
-export async function escalateTicket(ticketId: string, reason: string, escalatedBy: string): Promise<{ success: boolean; message: string }> {
-  await delay(500);
-  const ticket = ticketStore.find((t) => t.id === ticketId);
-  if (ticket) {
-    ticket.escalated = true;
-    ticket.escalationReason = reason;
-    ticket.status = 'escalated';
-    ticket.updatedAt = new Date().toISOString();
+export async function escalateTicket(
+  ticketId: string,
+  reason: string,
+  escalatedBy: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await apiClient.patch(`/support/tickets/${ticketId}`, {
+      escalated: true,
+      status: 'escalated',
+      priority: 'urgent',
+    });
     return { success: true, message: `Ticket ${ticketId} has been escalated.` };
+  } catch {
+    return { success: false, message: 'Failed to escalate ticket.' };
   }
-  return { success: false, message: 'Ticket not found.' };
 }
 
 export const ticketApi = {

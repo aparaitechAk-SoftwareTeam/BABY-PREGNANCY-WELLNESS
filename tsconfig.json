@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@prisma/client": ["backend/node_modules/@prisma/client"]
+    },
+    "skipLibCheck": true,
+    "moduleResolution": "node"
+  },
+  "references": [
+    { "path": "./backend" }
+  ]
+}

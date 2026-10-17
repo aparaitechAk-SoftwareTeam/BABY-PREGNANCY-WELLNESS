@@ -25,18 +25,20 @@ export default function MotherCalendar() {
   const trimester = usePregnancyStore((state) => state.trimester);
 
   const appointments = useAppointmentStore((state) => state.appointments);
+  const fetchLiveAppointments = useAppointmentStore((state) => state.fetchLiveAppointments);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Scroll to top when screen is focused
+  // Scroll to top and reload live appointments from DB when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+      fetchLiveAppointments();
+    }, [fetchLiveAppointments])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await fetchLiveAppointments();
     setIsRefreshing(false);
   };
 

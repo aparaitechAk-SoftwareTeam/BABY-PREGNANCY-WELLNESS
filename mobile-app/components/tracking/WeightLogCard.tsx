@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Calendar, ArrowRight } from 'lucide-react-native';
+import { usePregnancyStore } from '../../store/pregnancy.store';
 
 interface WeightLogCardProps {
   currentWeightKg?: number;
@@ -18,16 +19,21 @@ interface WeightLogCardProps {
 }
 
 export function WeightLogCard({
-  currentWeightKg = 64.2,
-  baselineWeightKg = 60.0,
+  currentWeightKg,
+  baselineWeightKg,
   trimester = 2,
   onSaveWeight,
 }: WeightLogCardProps) {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(currentWeightKg.toString());
+  const profile = usePregnancyStore((state) => state.profile);
 
-  const totalGain = (currentWeightKg - baselineWeightKg).toFixed(1);
+  const activeWeight = currentWeightKg || profile?.currentWeight || profile?.prePregnancyWeight || 60;
+  const activeBaseline = baselineWeightKg || profile?.prePregnancyWeight || activeWeight;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState(activeWeight.toString());
+
+  const totalGain = (activeWeight - activeBaseline).toFixed(1);
   const isPositive = parseFloat(totalGain) >= 0;
 
   const expectedRange =
@@ -88,7 +94,7 @@ export function WeightLogCard({
             </View>
           ) : (
             <Text style={styles.statValue}>
-              {currentWeightKg} <Text style={styles.statUnit}>kg</Text>
+              {activeWeight} <Text style={styles.statUnit}>kg</Text>
             </Text>
           )}
         </View>
@@ -105,19 +111,15 @@ export function WeightLogCard({
 
       {/* Recent Weigh-In Record by Date */}
       <View style={styles.recentDatesContainer}>
-        <Text style={styles.recentDatesLabel}>WHICH DAY RECORDED</Text>
+        <Text style={styles.recentDatesLabel}>RECORDED BASELINE</Text>
         <View style={styles.dateTagsRow}>
           <View style={styles.dateTagItem}>
-            <Text style={styles.dateTagDay}>Oct 15 (Today)</Text>
-            <Text style={styles.dateTagVal}>{currentWeightKg} kg</Text>
+            <Text style={styles.dateTagDay}>Current</Text>
+            <Text style={styles.dateTagVal}>{activeWeight} kg</Text>
           </View>
           <View style={styles.dateTagItem}>
-            <Text style={styles.dateTagDay}>Oct 08 (W19)</Text>
-            <Text style={styles.dateTagVal}>63.8 kg</Text>
-          </View>
-          <View style={styles.dateTagItem}>
-            <Text style={styles.dateTagDay}>Oct 01 (W18)</Text>
-            <Text style={styles.dateTagVal}>63.3 kg</Text>
+            <Text style={styles.dateTagDay}>Pre-Pregnancy</Text>
+            <Text style={styles.dateTagVal}>{activeBaseline} kg</Text>
           </View>
         </View>
       </View>

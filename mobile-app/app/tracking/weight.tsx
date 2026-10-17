@@ -37,13 +37,7 @@ interface WeightEntry {
   note?: string;
 }
 
-const DEFAULT_ENTRIES: WeightEntry[] = [
-  { id: 'we-1', dateStr: 'Oct 14, 2026', week: 24, weightKg: 64.2, note: 'Morning weigh-in' },
-  { id: 'we-2', dateStr: 'Oct 07, 2026', week: 23, weightKg: 63.8, note: 'Clinic visit' },
-  { id: 'we-3', dateStr: 'Sep 30, 2026', week: 22, weightKg: 63.3, note: 'Standard weigh-in' },
-  { id: 'we-4', dateStr: 'Sep 23, 2026', week: 21, weightKg: 62.7, note: 'After breakfast' },
-  { id: 'we-5', dateStr: 'Sep 16, 2026', week: 20, weightKg: 62.1, note: 'Anomaly scan day' },
-];
+const DEFAULT_ENTRIES: WeightEntry[] = [];
 
 const STORAGE_KEY = 'aparai_weight_logs_v1';
 const UNIT_STORAGE_KEY = 'aparai_weight_unit_v1';
@@ -56,29 +50,65 @@ export default function WeightTrackerScreen() {
   const user = useAuthStore((state: any) => state.user);
 
   const preWeightKg = profile?.prePregnancyWeight || 58.0;
-  const [entries, setEntries] = useState<WeightEntry[]>(DEFAULT_ENTRIES);
+  const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
   const [showAddForm, setShowAddForm] = useState(false);
   const [inputWeight, setInputWeight] = useState('');
   const [inputNote, setInputNote] = useState('');
 
-  // Load saved state
+  // Load live weight records from backend DB
   useEffect(() => {
     (async () => {
       try {
-        const storedLogs = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedLogs) {
-          setEntries(JSON.parse(storedLogs));
-        }
         const storedUnit = await AsyncStorage.getItem(UNIT_STORAGE_KEY);
         if (storedUnit === 'kg' || storedUnit === 'lbs') {
           setUnit(storedUnit);
         }
+
+        // 1. Fetch live records from database
+        const res = await trackingApi.getWeightHistory();
+        if (res?.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          const liveList: WeightEntry[] = res.data.data.map((item: any) => ({
+            id: item.id,
+            dateStr: item.dateStr || new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            week: item.week || currentWeek,
+            weightKg: parseFloat(item.weightKg),
+            note: item.note || undefined,
+          }));
+          setEntries(liveList);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(liveList));
+          return;
+        }
+
+        // 2. Fallback to AsyncStorage cache
+        const storedLogs = await AsyncStorage.getItem(STORAGE_KEY);
+        if (storedLogs) {
+          const parsed = JSON.parse(storedLogs);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEntries(parsed);
+            return;
+          }
+        }
+
+        // 3. Fallback to mother's setup baseline weight
+        if (profile?.currentWeight) {
+          setEntries([
+            {
+              id: 'init-setup-weight',
+              dateStr: 'Registered Baseline',
+              week: currentWeek,
+              weightKg: Number(profile.currentWeight),
+              note: 'Initial setup weight',
+            },
+          ]);
+        } else {
+          setEntries([]);
+        }
       } catch (e) {
-        console.error('Failed to load weight records:', e);
+        console.warn('Weight history fetch notice:', e);
       }
     })();
-  }, []);
+  }, [currentWeek, profile?.currentWeight]);
 
   const latestWeightKg = entries.length > 0 ? entries[0].weightKg : preWeightKg;
   const totalGainKg = parseFloat((latestWeightKg - preWeightKg).toFixed(1));

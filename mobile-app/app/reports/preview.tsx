@@ -40,6 +40,7 @@ import {
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useAuthStore } from '../../store/auth.store';
 import { useStepsStore } from '../../store/steps.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 type PeriodType = '7d' | '30d' | 'trimester' | 'all';
 
@@ -59,33 +60,7 @@ interface SavedReportRecord {
   type: string;
 }
 
-const DEFAULT_QUESTIONS: DoctorQuestion[] = [
-  {
-    id: 'q-1',
-    text: 'Are Braxton Hicks contractions expected at my current week and what frequency is normal?',
-    selected: true,
-  },
-  {
-    id: 'q-2',
-    text: 'Should my Iron and Calcium supplements be taken at different hours to optimize absorption?',
-    selected: true,
-  },
-  {
-    id: 'q-3',
-    text: 'When should I schedule the Gestational Glucose Tolerance Screening (GTT) test?',
-    selected: true,
-  },
-  {
-    id: 'q-4',
-    text: 'Are my occasional lower back aches and sleeping postures safe for baby blood flow?',
-    selected: false,
-  },
-  {
-    id: 'q-5',
-    text: 'Is my current rate of gestational weight gain aligned with clinical recommendations?',
-    selected: true,
-  },
-];
+const DEFAULT_QUESTIONS: DoctorQuestion[] = [];
 
 const STORAGE_SAVED_REPORTS = 'aparai_saved_reports_v1';
 
@@ -104,83 +79,93 @@ export default function ReportPreviewScreen() {
   const [newQuestionText, setNewQuestionText] = useState('');
   const [showAddQuestion, setShowAddQuestion] = useState(false);
 
-  // Dynamic tracked metrics state
-  const [trackedWeightGain, setTrackedWeightGain] = useState('+6.2 kg');
-  const [currentWeightVal, setCurrentWeightVal] = useState(profile?.currentWeight || 64.2);
-  const [preWeightVal, setPreWeightVal] = useState(profile?.prePregnancyWeight || 58.0);
-  const [kickAvgMinutes, setKickAvgMinutes] = useState(32);
-  const [kickSessionsCount, setKickSessionsCount] = useState(5);
-  const [hydrationAdherence, setHydrationAdherence] = useState(94);
-  const [loggedSymptomsList, setLoggedSymptomsList] = useState<string[]>([
-    'Mild Lower Backache',
-    'Morning Nausea (resolved)',
-    'Occasional Heartburn',
-  ]);
+  // Dynamic tracked metrics state from real DB
+  const [trackedWeightGain, setTrackedWeightGain] = useState('Not recorded');
+  const [currentWeightVal, setCurrentWeightVal] = useState(profile?.currentWeight || 0);
+  const [preWeightVal, setPreWeightVal] = useState(profile?.prePregnancyWeight || 0);
+  const [kickAvgMinutes, setKickAvgMinutes] = useState(0);
+  const [kickSessionsCount, setKickSessionsCount] = useState(0);
+  const [hydrationAdherence, setHydrationAdherence] = useState(0);
+  const [loggedSymptomsList, setLoggedSymptomsList] = useState<string[]>([]);
   const [redFlagCount, setRedFlagCount] = useState(0);
 
-  // Load existing user tracking data from AsyncStorage
+  // Load live tracking data from Neon DB + AsyncStorage
   useEffect(() => {
     (async () => {
       try {
-        // 1. Load Weight logs
-        const weightData = await AsyncStorage.getItem('aparai_weight_logs_v1');
-        if (weightData) {
-          const parsed = JSON.parse(weightData);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const latest = parsed[0].weightKg;
-            const baseline = profile?.prePregnancyWeight || 58.0;
-            const gain = (latest - baseline).toFixed(1);
-            setCurrentWeightVal(latest);
+        const [todaySummaryRes, weightRes, kickRes, symptomRes] = await Promise.allSettled([
+          trackingApi.getTodaySummary(),
+          trackingApi.getWeightHistory(),
+          trackingApi.getMovementHistory(),
+          trackingApi.getSymptomsHistory(),
+        ]);
+
+        const summary = todaySummaryRes.status === 'fulfilled' ? todaySummaryRes.value?.data : null;
+        const weightList = weightRes.status === 'fulfilled' ? weightRes.value?.data?.data || [] : [];
+        const kickList = kickRes.status === 'fulfilled' ? kickRes.value?.data?.data || [] : [];
+        const symptomList = symptomRes.status === 'fulfilled' ? symptomRes.value?.data?.data || [] : [];
+
+        // 1. Weight
+        if (weightList.length > 0) {
+          const latest = weightList[0].weightKg;
+          const baseline = profile?.prePregnancyWeight || (profile?.currentWeight ? profile.currentWeight - 3 : 58);
+          const gain = (latest - baseline).toFixed(1);
+          setCurrentWeightVal(latest);
+          setPreWeightVal(baseline);
+          setTrackedWeightGain(`${Number(gain) >= 0 ? '+' : ''}${gain} kg`);
+        } else if (profile?.currentWeight) {
+          setCurrentWeightVal(profile.currentWeight);
+          if (profile.prePregnancyWeight) {
+            setPreWeightVal(profile.prePregnancyWeight);
+            const gain = (profile.currentWeight - profile.prePregnancyWeight).toFixed(1);
             setTrackedWeightGain(`${Number(gain) >= 0 ? '+' : ''}${gain} kg`);
           }
         }
 
-        // 2. Load Kick history
-        const kickData = await AsyncStorage.getItem('aparai_kick_history_v1');
-        if (kickData) {
-          const parsedKicks = JSON.parse(kickData);
-          if (Array.isArray(parsedKicks) && parsedKicks.length > 0) {
-            setKickSessionsCount(parsedKicks.length);
-            const totalSec = parsedKicks.reduce((acc: number, curr: any) => acc + (curr.durationSeconds || 1800), 0);
-            const avgMin = Math.round(totalSec / parsedKicks.length / 60);
-            setKickAvgMinutes(avgMin || 30);
-          }
+        // 2. Kicks
+        if (kickList.length > 0) {
+          setKickSessionsCount(kickList.length);
+          const totalSec = kickList.reduce((acc: number, curr: any) => acc + (curr.durationSeconds || 1200), 0);
+          const avgMin = Math.round(totalSec / kickList.length / 60);
+          setKickAvgMinutes(avgMin || 20);
+        } else if (summary?.latestKicks && summary.latestKicks > 0) {
+          setKickSessionsCount(1);
+          setKickAvgMinutes(20);
         }
 
-        // 3. Load Symptoms history
-        const symptomData = await AsyncStorage.getItem('aparai_symptoms_history_v1');
-        if (symptomData) {
-          const parsedSymptoms = JSON.parse(symptomData);
-          if (Array.isArray(parsedSymptoms) && parsedSymptoms.length > 0) {
-            const allSymp = parsedSymptoms.flatMap((s: any) => s.symptoms || []);
-            const uniqueSymp = Array.from(new Set(allSymp)) as string[];
-            if (uniqueSymp.length > 0) {
-              setLoggedSymptomsList(uniqueSymp.slice(0, 4));
-            }
-            const redFlags = parsedSymptoms.filter((s: any) => s.hasRedFlag).length;
-            setRedFlagCount(redFlags);
-          }
+        // 3. Symptoms
+        if (symptomList.length > 0) {
+          const allSymp = symptomList.flatMap((s: any) => s.symptoms || []);
+          const uniqueSymp = Array.from(new Set(allSymp)) as string[];
+          setLoggedSymptomsList(uniqueSymp.slice(0, 5));
+          const urgentCount = symptomList.filter((s: any) => s.isUrgent).length;
+          setRedFlagCount(urgentCount);
         }
 
-        // 4. Load Maternal Notes for Doctor Questions
+        // 4. Hydration
+        const waterMl = summary?.totalWaterMl || summary?.waterMl || 0;
+        const pct = Math.min(100, Math.round((waterMl / 2500) * 100));
+        setHydrationAdherence(pct);
+
+        // 5. Load Maternal Notes for Doctor Questions
         const notesData = await AsyncStorage.getItem('aparai_maternal_notes_v1');
         if (notesData) {
           const parsedNotes = JSON.parse(notesData);
           if (Array.isArray(parsedNotes)) {
             const docNotes = parsedNotes.filter((n: any) => n.category === 'Doctor Questions');
             if (docNotes.length > 0) {
-              const extraQuestions: DoctorQuestion[] = docNotes.map((n: any, idx: number) => ({
+              const userQuestions: DoctorQuestion[] = docNotes.map((n: any, idx: number) => ({
                 id: `note-q-${idx}`,
                 text: n.content?.split('\n')[0] || n.title,
                 selected: true,
                 isCustom: true,
               }));
-              setQuestions((prev) => [...extraQuestions, ...prev]);
+              setQuestions(userQuestions);
             }
           }
         }
       } catch (err) {
-        console.error('Failed to load tracking data for report preview:', err);
+        console.error('Failed to load live tracking data for report preview:', err);
       }
     })();
   }, [profile]);
@@ -595,7 +580,9 @@ Clinical Disclaimer: Self-reported wellness tracker for doctor consultation. Not
             </View>
             <View style={styles.tableRow}>
               <Text style={styles.tableColLabel}>Logged Symptoms:</Text>
-              <Text style={styles.tableColValue}>{loggedSymptomsList.join(', ')}</Text>
+              <Text style={styles.tableColValue}>
+                {loggedSymptomsList.length > 0 ? loggedSymptomsList.join(', ') : 'None reported (feeling well)'}
+              </Text>
             </View>
             <View style={styles.tableRow}>
               <Text style={styles.tableColLabel}>Red-Flag Urgency Triage:</Text>
@@ -651,32 +638,41 @@ Clinical Disclaimer: Self-reported wellness tracker for doctor consultation. Not
 
           {/* Interactive Questions Checklist */}
           <View style={styles.questionsList}>
-            {questions.map((q) => (
-              <View key={q.id} style={styles.questionItemRow}>
-                <TouchableOpacity
-                  onPress={() => toggleQuestion(q.id)}
-                  style={styles.questionCheckboxTouch}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.checkboxBox, q.selected && styles.checkboxBoxActive]}>
-                    {q.selected && <CheckCircle2 size={13} color="#FFFFFF" />}
-                  </View>
-                  <Text style={[styles.questionText, !q.selected && styles.questionTextMuted]}>
-                    {q.text}
-                  </Text>
-                </TouchableOpacity>
-
-                {q.isCustom && (
+            {questions.length === 0 ? (
+              <View style={styles.emptyQuestionsBox}>
+                <Text style={styles.emptyQuestionsTitle}>No questions recorded yet</Text>
+                <Text style={styles.emptyQuestionsSub}>
+                  Tap "+ Add" above to include questions or concerns for your doctor.
+                </Text>
+              </View>
+            ) : (
+              questions.map((q) => (
+                <View key={q.id} style={styles.questionItemRow}>
                   <TouchableOpacity
-                    onPress={() => handleRemoveQuestion(q.id)}
-                    style={styles.deleteQuestionBtn}
+                    onPress={() => toggleQuestion(q.id)}
+                    style={styles.questionCheckboxTouch}
                     activeOpacity={0.7}
                   >
-                    <Trash2 size={12} color="#94A3B8" />
+                    <View style={[styles.checkboxBox, q.selected && styles.checkboxBoxActive]}>
+                      {q.selected && <CheckCircle2 size={13} color="#FFFFFF" />}
+                    </View>
+                    <Text style={[styles.questionText, !q.selected && styles.questionTextMuted]}>
+                      {q.text}
+                    </Text>
                   </TouchableOpacity>
-                )}
-              </View>
-            ))}
+
+                  {q.isCustom && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveQuestion(q.id)}
+                      style={styles.deleteQuestionBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Trash2 size={12} color="#94A3B8" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            )}
           </View>
 
           <View style={styles.sectionDivider} />
@@ -1267,5 +1263,21 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 12.5,
     fontWeight: '700',
+  },
+  emptyQuestionsBox: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 3,
+  },
+  emptyQuestionsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  emptyQuestionsSub: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });

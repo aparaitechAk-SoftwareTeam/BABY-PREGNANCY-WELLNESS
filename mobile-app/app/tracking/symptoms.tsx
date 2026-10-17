@@ -72,26 +72,7 @@ interface SymptomLogEntry {
   hasRedFlag: boolean;
 }
 
-const DEFAULT_LOGS: SymptomLogEntry[] = [
-  {
-    id: 'slog-1',
-    dateStr: 'Today, 09:30 AM',
-    week: 24,
-    symptoms: ['Morning Nausea', 'Tiredness & Fatigue'],
-    severity: 'Mild',
-    notes: 'Took ginger tea; felt better by midday.',
-    hasRedFlag: false,
-  },
-  {
-    id: 'slog-2',
-    dateStr: 'Yesterday, 08:00 PM',
-    week: 24,
-    symptoms: ['Lower Backache'],
-    severity: 'Moderate',
-    notes: 'Used maternity pillow for support.',
-    hasRedFlag: false,
-  },
-];
+const DEFAULT_LOGS: SymptomLogEntry[] = [];
 
 const STORAGE_KEY = 'aparai_symptoms_history_v1';
 
@@ -104,21 +85,48 @@ export default function SymptomsTrackerScreen() {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [severity, setSeverity] = useState<'Mild' | 'Moderate' | 'Severe'>('Mild');
   const [notes, setNotes] = useState('');
-  const [logs, setLogs] = useState<SymptomLogEntry[]>(DEFAULT_LOGS);
+  const [logs, setLogs] = useState<SymptomLogEntry[]>([]);
 
-  // Load saved history
+  // Load real symptoms history from database
   useEffect(() => {
     (async () => {
       try {
+        const res = await trackingApi.getSymptomsHistory();
+        if (res?.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          const liveLogs: SymptomLogEntry[] = res.data.data.map((item: any) => ({
+            id: item.id,
+            dateStr: new Date(item.createdAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            week: currentWeek,
+            symptoms: Array.isArray(item.symptoms) ? item.symptoms : [item.symptoms],
+            severity: (item.severity || 'Mild') as any,
+            notes: item.notes || '',
+            hasRedFlag: !!item.isUrgent,
+          }));
+          setLogs(liveLogs);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(liveLogs));
+          return;
+        }
+
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
-          setLogs(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLogs(parsed);
+            return;
+          }
         }
+        setLogs([]);
       } catch (e) {
-        console.error('Failed to load symptoms history:', e);
+        console.warn('Failed to load symptoms history:', e);
+        setLogs([]);
       }
     })();
-  }, []);
+  }, [currentWeek]);
 
   const handleToggleSymptom = (label: string, isRedFlag?: boolean) => {
     if (selectedSymptoms.includes(label)) {

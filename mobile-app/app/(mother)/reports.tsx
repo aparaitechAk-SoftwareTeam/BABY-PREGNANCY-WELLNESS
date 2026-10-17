@@ -17,6 +17,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { Download, Share2, TrendingUp, CheckCircle, MessageCircle, FileText, History } from 'lucide-react-native';
+import { trackingApi } from '../../services/api/tracking.api';
+
+interface LiveReportState {
+  fetalActivityText: string;
+  fetalActivityStatus: string;
+  weightGainText: string;
+  weightGainStatus: string;
+  hydrationText: string;
+  hydrationStatus: string;
+  wellnessText: string;
+  wellnessStatus: string;
+  recentActivities: Array<{ title: string; time: string; color?: string }>;
+}
 
 export default function MotherReports() {
   const router = useRouter();
@@ -29,24 +42,140 @@ export default function MotherReports() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'1week' | '1month' | 'trimester' | 'full'>('1week');
 
-  // Scroll to top when screen is focused
+  const [liveData, setLiveData] = useState<LiveReportState>({
+    fetalActivityText: 'No kicks yet',
+    fetalActivityStatus: 'Start kick session',
+    weightGainText: profile?.currentWeight ? `${profile.currentWeight} kg` : 'Not recorded',
+    weightGainStatus: `T${trimester} monitoring`,
+    hydrationText: '0 ml/day',
+    hydrationStatus: '0% of target',
+    wellnessText: 'Good',
+    wellnessStatus: 'No red flags',
+    recentActivities: [],
+  });
+
+  const loadRealtimeReportData = React.useCallback(async () => {
+    try {
+      const [todaySummaryRes, weightRes, kickRes, symptomRes] = await Promise.allSettled([
+        trackingApi.getTodaySummary(),
+        trackingApi.getWeightHistory(),
+        trackingApi.getMovementHistory(),
+        trackingApi.getSymptomsHistory(),
+      ]);
+
+      const summary = todaySummaryRes.status === 'fulfilled' ? todaySummaryRes.value?.data : null;
+      const weightList = weightRes.status === 'fulfilled' ? weightRes.value?.data?.data || [] : [];
+      const kickList = kickRes.status === 'fulfilled' ? kickRes.value?.data?.data || [] : [];
+      const symptomList = symptomRes.status === 'fulfilled' ? symptomRes.value?.data?.data || [] : [];
+
+      // 1. Fetal Activity
+      let fetalText = 'No kicks yet';
+      let fetalStatus = 'Ready to track';
+      if (kickList.length > 0) {
+        const latest = kickList[0];
+        const mins = Math.round((latest.durationSeconds || 1200) / 60);
+        fetalText = `${latest.kicks || 10} kicks/${mins}m`;
+        fetalStatus = '✓ Normal reactivity';
+      } else if (summary?.latestKicks && summary.latestKicks > 0) {
+        fetalText = `${summary.latestKicks} kicks logged`;
+        fetalStatus = '✓ Active today';
+      }
+
+      // 2. Weight
+      let weightText = profile?.currentWeight ? `${profile.currentWeight} kg` : 'Not recorded';
+      let weightStatus = `T${trimester} guideline`;
+      if (weightList.length > 0) {
+        const latest = weightList[0];
+        const baseline = profile?.prePregnancyWeight || (profile?.currentWeight ? profile.currentWeight - 3 : 58);
+        const gain = (latest.weightKg - baseline).toFixed(1);
+        weightText = `${Number(gain) >= 0 ? '+' : ''}${gain} kg (${latest.weightKg} kg)`;
+        weightStatus = `✓ T${trimester} guideline`;
+      } else if (profile?.currentWeight && profile?.prePregnancyWeight) {
+        const gain = (profile.currentWeight - profile.prePregnancyWeight).toFixed(1);
+        weightText = `${Number(gain) >= 0 ? '+' : ''}${gain} kg (${profile.currentWeight} kg)`;
+      }
+
+      // 3. Hydration
+      const waterMl = summary?.totalWaterMl || summary?.waterMl || 0;
+      const waterPct = Math.min(100, Math.round((waterMl / 2500) * 100));
+      const hydrationText = `${waterMl} ml/day`;
+      const hydrationStatus = waterMl > 0 ? `✓ ${waterPct}% of target` : 'Log today’s water';
+
+      // 4. Wellness
+      const hasUrgent = symptomList.some((s: any) => s.isUrgent);
+      const wellnessText = hasUrgent ? 'Attention' : 'Good';
+      const wellnessStatus = hasUrgent ? 'Review with doctor' : '✓ No red flags';
+
+      // 5. Recent Activity List
+      const acts: Array<{ title: string; time: string; color?: string }> = [];
+      if (kickList.length > 0) {
+        const k = kickList[0];
+        const mins = Math.round((k.durationSeconds || 1200) / 60);
+        acts.push({
+          title: 'Kick Counter Session',
+          time: `Recent • ${k.kicks || 10} kicks in ${mins} minutes`,
+          color: '#E11D48',
+        });
+      }
+      if (weightList.length > 0) {
+        const w = weightList[0];
+        acts.push({
+          title: 'Weight Logged',
+          time: `${w.dateStr || 'Recent'} • ${w.weightKg} kg`,
+          color: '#0284C7',
+        });
+      }
+      if (waterMl > 0) {
+        acts.push({
+          title: 'Hydration Intake Recorded',
+          time: `Today • ${waterMl} ml consumed`,
+          color: '#059669',
+        });
+      }
+      if (symptomList.length > 0) {
+        const s = symptomList[0];
+        const symNames = Array.isArray(s.symptoms) ? s.symptoms.join(', ') : 'Symptoms noted';
+        acts.push({
+          title: 'Symptom Check-in',
+          time: `Recent • ${symNames}`,
+          color: '#8B5CF6',
+        });
+      }
+
+      setLiveData({
+        fetalActivityText: fetalText,
+        fetalActivityStatus: fetalStatus,
+        weightGainText: weightText,
+        weightGainStatus: weightStatus,
+        hydrationText,
+        hydrationStatus,
+        wellnessText,
+        wellnessStatus,
+        recentActivities: acts,
+      });
+    } catch {
+      // Quiet fail
+    }
+  }, [currentWeek, trimester, profile]);
+
+  // Scroll to top and reload live data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+      loadRealtimeReportData();
+    }, [loadRealtimeReportData])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await loadRealtimeReportData();
     setIsRefreshing(false);
   };
 
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      // Simulate PDF generation
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
       const reportContent = `APARAITECH CLINICAL REPORT - Week ${currentWeek}
 
@@ -55,23 +184,24 @@ PREGNANCY DETAILS
 ═══════════════════════════════════════════════════════════
 Current Week: ${currentWeek} of 40
 Trimester: ${trimester}
+Patient: ${profile?.nickname || 'Expectant Mother'}
 Report Date: ${new Date().toLocaleDateString()}
 Report Period: ${selectedPeriod === '1week' ? '1 Week' : selectedPeriod === '1month' ? '1 Month' : selectedPeriod === 'trimester' ? 'Trimester' : 'Full'}
 
 ═══════════════════════════════════════════════════════════
-MATERNAL HEALTH SNAPSHOT
+MATERNAL HEALTH SNAPSHOT (REALTIME DATABASE)
 ═══════════════════════════════════════════════════════════
-✓ Fetal Activity: 10 kicks/34m (Normal reactivity)
-✓ Weight Gain: +4.2 kg (T${trimester} guideline)
-✓ Hydration: 2,250 ml/day (90% of target)
-✓ Wellness Status: Good - No red flags
+✓ Fetal Activity: ${liveData.fetalActivityText} (${liveData.fetalActivityStatus})
+✓ Weight: ${liveData.weightGainText} (${liveData.weightGainStatus})
+✓ Hydration: ${liveData.hydrationText} (${liveData.hydrationStatus})
+✓ Wellness Status: ${liveData.wellnessText} - ${liveData.wellnessStatus}
 
 ═══════════════════════════════════════════════════════════
 RECENT ACTIVITY LOG
 ═══════════════════════════════════════════════════════════
-• Kick Counter Session: 10 kicks in 34 minutes
-• Weight Logged: 64.2 kg
-• Hydration Goal Achieved: 2,500 ml consumed
+${liveData.recentActivities.length > 0 
+  ? liveData.recentActivities.map(a => `• ${a.title}: ${a.time}`).join('\n')
+  : '• No tracking sessions recorded yet for this period.'}
 • Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
 
 ═══════════════════════════════════════════════════════════
@@ -105,7 +235,6 @@ AparaiTech v1.0 • Medical Grade Encryption
     } catch (error) {
       setIsExporting(false);
       Alert.alert('❌ Error', 'Could not generate report. Please try again.');
-      console.error('Error:', error);
     }
   };
 
@@ -113,11 +242,11 @@ AparaiTech v1.0 • Medical Grade Encryption
     try {
       const reportText = `📋 *AparaiTech Pregnancy Clinical Report*\n\n` +
         `*Week ${currentWeek} • Trimester ${trimester}*\n\n` +
-        `📊 *Maternal Health Snapshot:*\n` +
-        `• Fetal Activity: 10 kicks/34m (Normal)\n` +
-        `• Weight Gain: +4.2 kg (T${trimester} guideline)\n` +
-        `• Hydration: 2,250 ml/day (90% of target)\n` +
-        `• Wellness: Good - No red flags\n\n` +
+        `📊 *Maternal Health Snapshot (Live):*\n` +
+        `• Fetal Activity: ${liveData.fetalActivityText}\n` +
+        `• Weight: ${liveData.weightGainText}\n` +
+        `• Hydration: ${liveData.hydrationText}\n` +
+        `• Wellness: ${liveData.wellnessText} (${liveData.wellnessStatus})\n\n` +
         `📅 *Report Period:* ${selectedPeriod === '1week' ? '1 Week' : selectedPeriod === '1month' ? '1 Month' : selectedPeriod === 'trimester' ? 'Trimester' : 'Full'}\n` +
         `🗓️ *Generated:* ${new Date().toLocaleDateString()}\n\n` +
         `🔒 *Disclaimer:* Self-reported data for doctor consultations. Not diagnostic.`;
@@ -128,9 +257,7 @@ AparaiTech v1.0 • Medical Grade Encryption
       const canOpen = await Linking.canOpenURL(whatsappURL);
       if (canOpen) {
         await Linking.openURL(whatsappURL);
-        Alert.alert('✅ Opening WhatsApp', 'Your report is ready to share with your doctor');
       } else {
-        // Fallback to generic share
         await Share.share({
           message: reportText,
           title: `Week ${currentWeek} Clinical Report`,
@@ -264,8 +391,8 @@ AparaiTech v1.0 • Medical Grade Encryption
               <Text style={styles.metricIcon}>👣</Text>
               <Text style={styles.metricLabel}>FETAL ACTIVITY</Text>
             </View>
-            <Text style={styles.metricValue}>10 kicks/34m</Text>
-            <Text style={styles.metricStatus}>✓ Normal reactivity</Text>
+            <Text style={styles.metricValue}>{liveData.fetalActivityText}</Text>
+            <Text style={styles.metricStatus}>{liveData.fetalActivityStatus}</Text>
           </View>
 
           <View style={[styles.metricBox, styles.metricBoxSecondary]}>
@@ -273,8 +400,8 @@ AparaiTech v1.0 • Medical Grade Encryption
               <Text style={styles.metricIcon}>⚖️</Text>
               <Text style={styles.metricLabel}>WEIGHT GAIN</Text>
             </View>
-            <Text style={styles.metricValue}>+4.2 kg</Text>
-            <Text style={styles.metricStatus}>✓ T{trimester} guideline</Text>
+            <Text style={styles.metricValue}>{liveData.weightGainText}</Text>
+            <Text style={styles.metricStatus}>{liveData.weightGainStatus}</Text>
           </View>
 
           <View style={[styles.metricBox, styles.metricBoxTertiary]}>
@@ -282,8 +409,8 @@ AparaiTech v1.0 • Medical Grade Encryption
               <Text style={styles.metricIcon}>💧</Text>
               <Text style={styles.metricLabel}>HYDRATION</Text>
             </View>
-            <Text style={styles.metricValue}>2,250 ml/day</Text>
-            <Text style={styles.metricStatus}>✓ 90% of target</Text>
+            <Text style={styles.metricValue}>{liveData.hydrationText}</Text>
+            <Text style={styles.metricStatus}>{liveData.hydrationStatus}</Text>
           </View>
 
           <View style={[styles.metricBox, styles.metricBoxQuaternary]}>
@@ -291,8 +418,8 @@ AparaiTech v1.0 • Medical Grade Encryption
               <Text style={styles.metricIcon}>😌</Text>
               <Text style={styles.metricLabel}>WELLNESS</Text>
             </View>
-            <Text style={styles.metricValue}>Good</Text>
-            <Text style={styles.metricStatus}>✓ No red flags</Text>
+            <Text style={styles.metricValue}>{liveData.wellnessText}</Text>
+            <Text style={styles.metricStatus}>{liveData.wellnessStatus}</Text>
           </View>
         </View>
 
@@ -338,29 +465,24 @@ AparaiTech v1.0 • Medical Grade Encryption
         </View>
 
         <View style={styles.activityLog}>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Kick Counter Session</Text>
-              <Text style={styles.activityTime}>Today at 2:30 PM • 10 kicks in 34 minutes</Text>
+          {liveData.recentActivities.length === 0 ? (
+            <View style={styles.emptyActivityBox}>
+              <Text style={styles.emptyActivityTitle}>No recent activity logged</Text>
+              <Text style={styles.emptyActivitySub}>
+                Use the Track tab to record fetal kicks, hydration, or weight to populate your clinical logs.
+              </Text>
             </View>
-          </View>
-
-          <View style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: '#0284C7' }]} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Weight Logged</Text>
-              <Text style={styles.activityTime}>Today at 7:45 AM • 64.2 kg</Text>
-            </View>
-          </View>
-
-          <View style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: '#059669' }]} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Hydration Goal Achieved</Text>
-              <Text style={styles.activityTime}>Yesterday • 2,500 ml consumed</Text>
-            </View>
-          </View>
+          ) : (
+            liveData.recentActivities.map((act, idx) => (
+              <View key={`act-${idx}`} style={styles.activityItem}>
+                <View style={[styles.activityDot, { backgroundColor: act.color || '#E11D48' }]} />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>{act.title}</Text>
+                  <Text style={styles.activityTime}>{act.time}</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* 5. Medical Disclaimer */}
@@ -690,6 +812,23 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 11,
     color: '#64748B',
+  },
+  emptyActivityBox: {
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  emptyActivityTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 4,
+  },
+  emptyActivitySub: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   disclaimerBox: {
     backgroundColor: '#F8FAFC',

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BookOpen, Plus, ArrowRight, HelpCircle, Calendar, Sparkles } from 'lucide-react-native';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface NoteItem {
   id: string;
@@ -13,24 +14,7 @@ interface NoteItem {
   week: number;
 }
 
-const DEFAULT_PREVIEW_NOTES: NoteItem[] = [
-  {
-    id: 'note-1',
-    title: 'Questions for Dr. Sharma at Next Checkup',
-    content: '1. Safe antacids for heartburn.\n2. When to schedule Glucose Tolerance Test?\n3. Safe prenatal yoga stretches.',
-    category: 'Doctor Questions',
-    dateStr: 'Today, 11:00 AM',
-    week: 20,
-  },
-  {
-    id: 'note-2',
-    title: 'Hospital Bag Essentials List',
-    content: 'Maternity gowns, baby onesies, feeding pillow, discharge papers.',
-    category: 'Nursery & Prep',
-    dateStr: 'Oct 12, 2026',
-    week: 20,
-  },
-];
+const DEFAULT_PREVIEW_NOTES: NoteItem[] = [];
 
 const STORAGE_KEY = 'aparai_maternal_notes_v1';
 
@@ -41,15 +25,34 @@ export function NotesCard() {
   useEffect(() => {
     (async () => {
       try {
+        const res = await trackingApi.getNotes();
+        const serverNotes = res?.data?.data;
+        if (Array.isArray(serverNotes) && serverNotes.length > 0) {
+          const mapped: NoteItem[] = serverNotes.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            content: n.content,
+            category: n.category || 'Doctor Questions',
+            dateStr: n.dateStr || new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            week: n.week || 20,
+          }));
+          setNotes(mapped);
+          return;
+        }
+      } catch {
+        // Fallback to local storage
+      }
+
+      try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setNotes(parsed);
           }
         }
       } catch {
-        // Fallback to default preview notes
+        // Fallback
       }
     })();
   }, []);
@@ -67,7 +70,7 @@ export function NotesCard() {
           <View>
             <Text style={styles.titleText}>Notes & Doctor Questions</Text>
             <Text style={styles.subtitleText}>
-              {notes.length} notes saved • Private pregnancy journal
+              {notes.length === 0 ? 'No notes recorded' : `${notes.length} note${notes.length > 1 ? 's' : ''} saved`} • Private pregnancy journal
             </Text>
           </View>
         </View>
@@ -84,28 +87,37 @@ export function NotesCard() {
 
       {/* Preview Note Items */}
       <View style={styles.notesList}>
-        {previewList.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            onPress={() => router.push('/tracking/notes')}
-            style={styles.noteItem}
-            activeOpacity={0.8}
-          >
-            <View style={styles.noteTopRow}>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{item.category}</Text>
+        {previewList.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>No notes recorded yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Keep track of questions for your doctor or thoughts for your baby.
+            </Text>
+          </View>
+        ) : (
+          previewList.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              onPress={() => router.push('/tracking/notes')}
+              style={styles.noteItem}
+              activeOpacity={0.8}
+            >
+              <View style={styles.noteTopRow}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{item.category}</Text>
+                </View>
+                <Text style={styles.dateText}>{item.dateStr}</Text>
               </View>
-              <Text style={styles.dateText}>{item.dateStr}</Text>
-            </View>
 
-            <Text style={styles.noteTitle} numberOfLines={1}>
-              {item.title}
-            </Text>
-            <Text style={styles.noteExcerpt} numberOfLines={2}>
-              {item.content}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.noteTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.noteExcerpt} numberOfLines={2}>
+                {item.content}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
       </View>
 
       {/* Action Footer */}
@@ -252,5 +264,21 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '700',
     color: '#7C3AED',
+  },
+  emptyContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 2,
+  },
+  emptySubtitle: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });

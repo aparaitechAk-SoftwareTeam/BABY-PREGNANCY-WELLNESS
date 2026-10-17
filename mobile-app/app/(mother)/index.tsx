@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useStepsStore } from '../../store/steps.store';
 import { useRoutineStore } from '../../store/routine.store';
 import { useNotificationStore } from '../../store/notification.store';
+import { useAppointmentStore } from '../../store/appointment.store';
 import { trackingApi } from '../../services/api/tracking.api';
 
 // Modular UI Components from components/dashboard
@@ -66,6 +67,7 @@ export default function MotherDashboard() {
         loadTodaySteps(),
         loadTasks(currentWeek),
         loadNotifications(),
+        useAppointmentStore.getState().fetchLiveAppointments(),
         (async () => {
           try {
             const res = await trackingApi.getTodaySummary();

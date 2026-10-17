@@ -42,34 +42,7 @@ interface KickSession {
   notes?: string;
 }
 
-const DEFAULT_SESSIONS: KickSession[] = [
-  {
-    id: 'ks-1',
-    dateStr: 'Today, 08:30 PM',
-    startTime: '08:30 PM',
-    durationSeconds: 1140, // 19 mins
-    kicks: 10,
-    reachedTen: true,
-    notes: 'Active after dinner & glass of cold water',
-  },
-  {
-    id: 'ks-2',
-    dateStr: 'Yesterday, 02:15 PM',
-    startTime: '02:15 PM',
-    durationSeconds: 1560, // 26 mins
-    kicks: 10,
-    reachedTen: true,
-    notes: 'Resting on left side',
-  },
-  {
-    id: 'ks-3',
-    dateStr: 'Oct 13, 09:00 PM',
-    startTime: '09:00 PM',
-    durationSeconds: 1320, // 22 mins
-    kicks: 10,
-    reachedTen: true,
-  },
-];
+const DEFAULT_SESSIONS: KickSession[] = [];
 
 const STORAGE_KEY = 'aparai_kick_sessions';
 
@@ -363,34 +336,43 @@ export default function MovementTrackerScreen() {
             <Text style={styles.historyTitle}>Recent Kick History</Text>
           </View>
 
-          {sessions.map((item) => (
-            <View key={item.id} style={styles.historyCard}>
-              <View style={styles.historyTop}>
-                <View>
-                  <Text style={styles.historyDate}>{item.dateStr}</Text>
-                  <Text style={styles.historyDuration}>
-                    Duration: {formatTimer(item.durationSeconds)}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.historyBadge,
-                    item.reachedTen ? styles.historyBadgeTen : styles.historyBadgePart,
-                  ]}
-                >
-                  <Text
+          {sessions.length === 0 ? (
+            <View style={styles.emptySessionCard}>
+              <Text style={styles.emptySessionTitle}>No kick sessions recorded yet</Text>
+              <Text style={styles.emptySessionSub}>
+                Tap the "TAP PER KICK" button above whenever you feel your baby move to record your first session.
+              </Text>
+            </View>
+          ) : (
+            sessions.map((item) => (
+              <View key={item.id} style={styles.historyCard}>
+                <View style={styles.historyTop}>
+                  <View>
+                    <Text style={styles.historyDate}>{item.dateStr}</Text>
+                    <Text style={styles.historyDuration}>
+                      Duration: {formatTimer(item.durationSeconds)}
+                    </Text>
+                  </View>
+                  <View
                     style={[
-                      styles.historyBadgeText,
-                      item.reachedTen ? styles.historyBadgeTextTen : styles.historyBadgeTextPart,
+                      styles.historyBadge,
+                      item.reachedTen ? styles.historyBadgeTen : styles.historyBadgePart,
                     ]}
                   >
-                    {item.kicks} Kicks {item.reachedTen ? '✓' : ''}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.historyBadgeText,
+                        item.reachedTen ? styles.historyBadgeTextTen : styles.historyBadgeTextPart,
+                      ]}
+                    >
+                      {item.kicks} Kicks {item.reachedTen ? '✓' : ''}
+                    </Text>
+                  </View>
                 </View>
+                {!!item.notes && <Text style={styles.historyNotes}>"{item.notes}"</Text>}
               </View>
-              {!!item.notes && <Text style={styles.historyNotes}>"{item.notes}"</Text>}
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -781,5 +763,25 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontStyle: 'italic',
     marginTop: 6,
+  },
+  emptySessionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+  },
+  emptySessionTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  emptySessionSub: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

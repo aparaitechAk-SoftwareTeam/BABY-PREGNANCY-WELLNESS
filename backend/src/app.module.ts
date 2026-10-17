@@ -7,6 +7,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PregnancyContentModule } from './pregnancy-content/pregnancy-content.module';
 import { UsersModule } from './users/users.module';
 import { SupportModule } from './support/support.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SupportModule } from './support/support.module';
     PregnancyContentModule,
     UsersModule,
     SupportModule,
+    AppointmentsModule,
   ],
   controllers: [],
   providers: [],

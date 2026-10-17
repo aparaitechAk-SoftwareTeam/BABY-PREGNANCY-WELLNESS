@@ -23,6 +23,7 @@ import {
   Trash2,
   TrendingUp,
   Info,
+  Activity,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
@@ -36,43 +37,7 @@ interface KickSessionRecord {
   notes?: string;
 }
 
-const DEFAULT_SESSIONS: KickSessionRecord[] = [
-  {
-    id: 'ks-1',
-    dateStr: 'Today, 02:30 PM',
-    week: 24,
-    kickCount: 10,
-    durationSeconds: 2040, // 34 min
-    status: 'Normal',
-    notes: 'Active right after lunch and cold water.',
-  },
-  {
-    id: 'ks-2',
-    dateStr: 'Yesterday, 08:15 PM',
-    week: 24,
-    kickCount: 10,
-    durationSeconds: 1560, // 26 min
-    status: 'Normal',
-    notes: 'Rhythmic rolls and strong kicks while resting.',
-  },
-  {
-    id: 'ks-3',
-    dateStr: 'Oct 13, 10:00 AM',
-    week: 23,
-    kickCount: 10,
-    durationSeconds: 2880, // 48 min
-    status: 'Normal',
-    notes: 'Took a while to get started in the morning.',
-  },
-  {
-    id: 'ks-4',
-    dateStr: 'Oct 11, 09:45 PM',
-    week: 23,
-    kickCount: 10,
-    durationSeconds: 1920, // 32 min
-    status: 'Normal',
-  },
-];
+const DEFAULT_SESSIONS: KickSessionRecord[] = [];
 
 const STORAGE_KEY = 'aparai_kick_history_v1';
 
@@ -89,12 +54,27 @@ export default function MovementHistoryScreen() {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           setSessions(JSON.parse(stored));
+        } else {
+          const alternate = await AsyncStorage.getItem('aparai_kick_sessions');
+          if (alternate) {
+            const parsed = JSON.parse(alternate);
+            const mapped = parsed.map((s: any) => ({
+              id: s.id,
+              dateStr: s.dateStr,
+              week: currentWeek,
+              kickCount: s.kicks || 10,
+              durationSeconds: s.durationSeconds || 1200,
+              status: (s.kicks || 10) >= 10 ? 'Normal' : 'Reduced',
+              notes: s.notes,
+            }));
+            setSessions(mapped);
+          }
         }
       } catch (e) {
         console.error('Failed to load kick session history:', e);
       }
     })();
-  }, []);
+  }, [currentWeek]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -106,7 +86,7 @@ export default function MovementHistoryScreen() {
     ? Math.round(
         sessions.reduce((acc, curr) => acc + curr.durationSeconds, 0) / (sessions.length * 60)
       )
-    : 32;
+    : 0;
 
   const handleCallClinic = () => {
     const phone = profile?.doctorPhone || '108';
@@ -221,42 +201,52 @@ export default function MovementHistoryScreen() {
           <Text style={styles.historyCount}>{sessions.length} sessions</Text>
         </View>
 
-        {sessions.map((item) => (
-          <View key={item.id} style={styles.sessionCard}>
-            <View style={styles.sessionTopRow}>
-              <View style={styles.sessionLeft}>
-                <View style={styles.sessionBadge}>
-                  <Text style={styles.sessionBadgeText}>10/10</Text>
-                </View>
-                <View>
-                  <Text style={styles.sessionDate}>{item.dateStr}</Text>
-                  <Text style={styles.sessionMeta}>
-                    Week {item.week} • Completed in {formatDuration(item.durationSeconds)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.sessionRight}>
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusPillText}>{item.status}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleDeleteSession(item.id)}
-                  style={styles.deleteBtn}
-                  activeOpacity={0.7}
-                >
-                  <Trash2 size={14} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {item.notes && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteText}>{item.notes}</Text>
-              </View>
-            )}
+        {sessions.length === 0 ? (
+          <View style={styles.emptySessionBox}>
+            <Activity size={32} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No kick sessions recorded yet</Text>
+            <Text style={styles.emptySub}>
+              Start a kick counter session to monitor and log your baby's movement patterns.
+            </Text>
           </View>
-        ))}
+        ) : (
+          sessions.map((item) => (
+            <View key={item.id} style={styles.sessionCard}>
+              <View style={styles.sessionTopRow}>
+                <View style={styles.sessionLeft}>
+                  <View style={styles.sessionBadge}>
+                    <Text style={styles.sessionBadgeText}>10/10</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.sessionDate}>{item.dateStr}</Text>
+                    <Text style={styles.sessionMeta}>
+                      Week {item.week} • Completed in {formatDuration(item.durationSeconds)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.sessionRight}>
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusPillText}>{item.status}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteSession(item.id)}
+                    style={styles.deleteBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Trash2 size={14} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {item.notes && (
+                <View style={styles.noteBox}>
+                  <Text style={styles.noteText}>{item.notes}</Text>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -530,5 +520,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#475569',
     lineHeight: 16,
+  },
+  emptySessionBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+    marginVertical: 8,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  emptySub: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

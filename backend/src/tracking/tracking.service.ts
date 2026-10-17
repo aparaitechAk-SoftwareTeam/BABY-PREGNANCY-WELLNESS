@@ -317,4 +317,59 @@ export class TrackingService {
       },
     };
   }
+
+  // 8. MATERNAL NOTES & DOCTOR QUESTIONS
+  async createNote(userIdOrIdentifier: string, dto: any) {
+    const userId = await this.resolveUserId(userIdOrIdentifier || dto.userId, dto.email);
+    const record = await (this.prisma as any).maternalNote.create({
+      data: {
+        userId,
+        title: dto.title,
+        content: dto.content,
+        category: dto.category || 'Doctor Questions',
+        dateStr: dto.dateStr || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        week: dto.week || 20,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Note saved successfully to database',
+      data: record,
+    };
+  }
+
+  async getNotes(userIdOrIdentifier: string, category?: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const where: any = { userId };
+    if (category && category !== 'All') {
+      where.category = category;
+    }
+
+    const records = await (this.prisma as any).maternalNote.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    return {
+      success: true,
+      data: records,
+    };
+  }
+
+  async deleteNote(userIdOrIdentifier: string, noteId: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    await (this.prisma as any).maternalNote.deleteMany({
+      where: {
+        id: noteId,
+        userId,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Note deleted',
+    };
+  }
 }

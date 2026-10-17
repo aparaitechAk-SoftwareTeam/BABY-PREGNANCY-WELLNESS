@@ -30,6 +30,7 @@ import {
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useStepsStore } from '../../store/steps.store';
 import { useRoutineStore } from '../../store/routine.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 // Interactive Routine Component for quick check-off
 import { RoutineTrackerCard } from '../../components/tracking';
@@ -51,25 +52,58 @@ export default function MotherTrack() {
   const getRoutineStats = useRoutineStore((state) => state.getStats);
   const loadRoutineTasks = useRoutineStore((state) => state.loadTasks);
 
-  const [waterLoggedMl, setWaterLoggedMl] = useState(1750);
-  const [currentWeightKg] = useState(
-    profile?.prePregnancyWeight ? profile.prePregnancyWeight + 4.2 : 64.2
+  const [waterLoggedMl, setWaterLoggedMl] = useState(0);
+  const [currentWeightKg, setCurrentWeightKg] = useState<number>(
+    profile?.currentWeight || profile?.prePregnancyWeight || 60
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showRoutines, setShowRoutines] = useState(true);
 
-  // Reload data when focused
+  // Reload real data when focused
   useFocusEffect(
     React.useCallback(() => {
       loadSteps(trimester);
       loadRoutineTasks();
-    }, [trimester, loadSteps, loadRoutineTasks])
+
+      // Fetch live daily water and weight from backend DB
+      (async () => {
+        try {
+          const [summaryRes, weightRes] = await Promise.allSettled([
+            trackingApi.getTodaySummary(),
+            trackingApi.getWeightHistory(),
+          ]);
+
+          if (summaryRes.status === 'fulfilled' && summaryRes.value?.data) {
+            const summary = summaryRes.value.data;
+            if (typeof summary.waterMl === 'number') {
+              setWaterLoggedMl(summary.waterMl);
+            }
+          }
+
+          if (weightRes.status === 'fulfilled' && Array.isArray(weightRes.value?.data?.data) && weightRes.value.data.data.length > 0) {
+            const latest = weightRes.value.data.data[0];
+            if (latest?.weightKg) {
+              setCurrentWeightKg(parseFloat(latest.weightKg));
+            }
+          } else if (profile?.currentWeight) {
+            setCurrentWeightKg(Number(profile.currentWeight));
+          }
+        } catch {
+          // Quiet catch
+        }
+      })();
+    }, [trimester, loadSteps, loadRoutineTasks, profile?.currentWeight])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await Promise.all([loadSteps(trimester), loadRoutineTasks()]);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    try {
+      const summaryRes = await trackingApi.getTodaySummary();
+      if (typeof summaryRes?.data?.waterMl === 'number') {
+        setWaterLoggedMl(summaryRes.data.waterMl);
+      }
+    } catch {}
     setIsRefreshing(false);
   };
 

@@ -30,4 +30,11 @@ export const trackingApi = {
   // Symptoms tracking
   logSymptoms: (data: any) => apiClient.post('/tracking/symptoms', data),
   getSymptomsHistory: () => apiClient.get('/tracking/symptoms'),
+
+  // Maternal Notes & Doctor Questions
+  logNote: (data: { title: string; content: string; category?: string; dateStr?: string; week?: number }) =>
+    apiClient.post('/tracking/notes', data),
+  getNotes: (category?: string) =>
+    apiClient.get('/tracking/notes', { params: category && category !== 'All' ? { category } : undefined }),
+  deleteNote: (id: string) => apiClient.delete(`/tracking/notes/${id}`),
 };

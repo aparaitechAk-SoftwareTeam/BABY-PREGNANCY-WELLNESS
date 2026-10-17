@@ -226,8 +226,8 @@ export default function WeekDetailScreen() {
         {/* 4. Mom's Body Changes & Comfort Tips */}
         <MomBodyChangesCard changes={weekData.changes} />
 
-        {/* 5. Weekly Action Checklist */}
-        <WeeklyChecklistCard initialItems={weekData.checklist} />
+        {/* 5. Weekly Action Checklist (Live Neon DB Synced) */}
+        <WeeklyChecklistCard initialItems={weekData.checklist} week={selectedWeek} />
 
         {/* 6. Content Governance & Clinical Review Notice (PRD Section 7) */}
         <ContentGovernanceNotice />

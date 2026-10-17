@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
+  Param,
+  Query,
   Body,
   UseGuards,
 } from '@nestjs/common';
@@ -138,5 +141,36 @@ export class TrackingController {
   async getTodaySummary(@CurrentUser() user: any) {
     const userIdOrIdentifier = user?.sub || user?.id;
     return this.trackingService.getTodaySummary(userIdOrIdentifier);
+  }
+
+  // 8. NOTES & QUESTIONS
+  @UseGuards(JwtAuthGuard)
+  @Post('notes')
+  async recordNote(
+    @CurrentUser() user: any,
+    @Body() dto: any,
+  ) {
+    const userIdOrIdentifier = user?.sub || user?.id || dto.userId || dto.email;
+    return this.trackingService.createNote(userIdOrIdentifier, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('notes')
+  async getNotes(
+    @CurrentUser() user: any,
+    @Query('category') category?: string,
+  ) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getNotes(userIdOrIdentifier, category);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('notes/:id')
+  async deleteNote(
+    @CurrentUser() user: any,
+    @Param('id') noteId: string,
+  ) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.deleteNote(userIdOrIdentifier, noteId);
   }
 }

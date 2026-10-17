@@ -1,24 +1,77 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { contentApi } from '../../services/api/content.api';
 
 export interface ChecklistItem {
   id: string;
   text: string;
   category: string;
+  isCompleted?: boolean;
 }
 
 interface WeeklyChecklistCardProps {
-  initialItems: ChecklistItem[];
+  initialItems?: ChecklistItem[];
+  week?: number;
 }
 
-export function WeeklyChecklistCard({ initialItems }: WeeklyChecklistCardProps) {
+export function WeeklyChecklistCard({ initialItems = [], week }: WeeklyChecklistCardProps) {
+  const [items, setItems] = useState<ChecklistItem[]>(initialItems);
   const [completedMap, setCompletedMap] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
 
-  const toggleCheck = (id: string) => {
+  useEffect(() => {
+    let isMounted = true;
+    if (week) {
+      setLoading(true);
+      contentApi
+        .getTasksByWeek(week)
+        .then((res) => {
+          if (!isMounted) return;
+          const data = res?.data?.data;
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: ChecklistItem[] = data.map((t: any) => ({
+              id: t.id,
+              text: t.title || t.description || 'Task',
+              category: t.category || 'Planning',
+              isCompleted: !!t.isCompleted,
+            }));
+            setItems(mapped);
+            const map: Record<string, boolean> = {};
+            mapped.forEach((m) => {
+              map[m.id] = !!m.isCompleted;
+            });
+            setCompletedMap(map);
+          } else {
+            setItems(initialItems);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setItems(initialItems);
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    } else {
+      setItems(initialItems);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [week, initialItems]);
+
+  const toggleCheck = async (id: string) => {
+    const nextState = !completedMap[id];
     setCompletedMap((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [id]: nextState,
     }));
+
+    // Realtime database toggle
+    try {
+      await contentApi.toggleTask(id, nextState);
+    } catch (e) {
+      // Quiet background fallback
+    }
   };
 
   return (
@@ -26,14 +79,15 @@ export function WeeklyChecklistCard({ initialItems }: WeeklyChecklistCardProps) 
       <View style={styles.headerRow}>
         <Text style={styles.headerIcon}>📋</Text>
         <Text style={styles.headerTitle}>Weekly Action Checklist</Text>
+        {loading && <ActivityIndicator size="small" color="#E11D48" style={{ marginLeft: 8 }} />}
       </View>
 
       <Text style={styles.subText}>
-        Recommended personal planning & clinician preparation for this week:
+        Live clinical & preparation tasks synchronized with your care profile:
       </Text>
 
       <View style={styles.itemsList}>
-        {initialItems.map((item) => {
+        {items.map((item) => {
           const isDone = !!completedMap[item.id];
           return (
             <TouchableOpacity

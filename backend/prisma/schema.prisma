@@ -44,6 +44,7 @@ model User {
   notifications      Notification[]
   tickets            SupportTicket[]
   messages           TicketMessage[]
+  maternalNotes      MaternalNote[]
 }
 
 model OtpCode {
@@ -295,5 +296,20 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([action, entity])
+}
+
+model MaternalNote {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  category  String   @default("Doctor Questions")
+  dateStr   String?
+  week      Int      @default(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, category])
 }
 

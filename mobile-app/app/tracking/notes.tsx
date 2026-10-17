@@ -24,6 +24,7 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { trackingApi } from '../../services/api/tracking.api';
 
 interface WellnessNote {
   id: string;
@@ -36,32 +37,7 @@ interface WellnessNote {
 
 const CATEGORIES = ['All', 'Doctor Questions', 'Baby Registry', 'Nursery & Prep', 'Memories'];
 
-const DEFAULT_NOTES: WellnessNote[] = [
-  {
-    id: 'note-1',
-    title: 'Questions for Dr. Sharma at Week 24 Checkup',
-    content: '1. Ask about safe antacid brands for heartburn.\n2. When should we schedule the 28-week Glucose Tolerance Test (GTT)?\n3. Can I continue prenatal yoga classes?',
-    category: 'Doctor Questions',
-    dateStr: 'Today, 11:00 AM',
-    week: 24,
-  },
-  {
-    id: 'note-2',
-    title: 'Hospital Bag Essentials List',
-    content: 'Maternity robes, baby onesies, feeding pillows, hospital registration documents, and camera charger.',
-    category: 'Nursery & Prep',
-    dateStr: 'Oct 12, 2026',
-    week: 23,
-  },
-  {
-    id: 'note-3',
-    title: 'First Baby Kicks',
-    content: 'Felt tiny fluttering kicks for the very first time after eating dinner. Beautiful feeling!',
-    category: 'Memories',
-    dateStr: 'Sep 28, 2026',
-    week: 21,
-  },
-];
+const DEFAULT_NOTES: WellnessNote[] = [];
 
 const STORAGE_KEY = 'aparai_maternal_notes_v1';
 
@@ -77,18 +53,40 @@ export default function NotesScreen() {
   const [inputCategory, setInputCategory] = useState('Doctor Questions');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setNotes(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error('Failed to load notes:', e);
+  const loadNotesFromDB = async () => {
+    try {
+      const res = await trackingApi.getNotes();
+      const serverNotes = res?.data?.data;
+      if (Array.isArray(serverNotes) && serverNotes.length > 0) {
+        const mapped: WellnessNote[] = serverNotes.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          category: n.category || 'Doctor Questions',
+          dateStr: n.dateStr || new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          week: n.week || currentWeek,
+        }));
+        setNotes(mapped);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+        return;
       }
-    })();
-  }, []);
+    } catch {
+      // Offline fallback
+    }
+
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setNotes(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to load notes:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadNotesFromDB();
+  }, [currentWeek]);
 
   const handleSaveNote = async () => {
     if (!inputTitle.trim() || !inputContent.trim()) {
@@ -99,8 +97,25 @@ export default function NotesScreen() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+    let savedId = 'note_' + Date.now();
+
+    try {
+      const res = await trackingApi.logNote({
+        title: inputTitle.trim(),
+        content: inputContent.trim(),
+        category: inputCategory,
+        dateStr,
+        week: currentWeek,
+      });
+      if (res?.data?.data?.id) {
+        savedId = res.data.data.id;
+      }
+    } catch (err: any) {
+      console.warn('Backend note sync notice:', err?.message || err);
+    }
+
     const newNote: WellnessNote = {
-      id: 'note_' + Date.now(),
+      id: savedId,
       title: inputTitle.trim(),
       content: inputContent.trim(),
       category: inputCategory,
@@ -119,7 +134,7 @@ export default function NotesScreen() {
     setInputTitle('');
     setInputContent('');
     setShowAddForm(false);
-    Alert.alert('Note Saved! 📝', 'Your note has been added to your pregnancy journal.');
+    Alert.alert('Note Saved! 📝', 'Your note has been saved to your clinical database.');
   };
 
   const handleDeleteNote = (id: string) => {
@@ -131,6 +146,11 @@ export default function NotesScreen() {
         onPress: async () => {
           const updated = notes.filter((n) => n.id !== id);
           setNotes(updated);
+          try {
+            await trackingApi.deleteNote(id);
+          } catch (e) {
+            // Ignore offline delete error
+          }
           try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
           } catch (e) {

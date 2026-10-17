@@ -53,28 +53,7 @@ interface MoodLogEntry {
   journalText?: string;
 }
 
-const DEFAULT_LOGS: MoodLogEntry[] = [
-  {
-    id: 'mlog-1',
-    dateStr: 'Today, 10:15 AM',
-    week: 24,
-    moodId: 'joyful',
-    moodLabel: 'Grateful & Joyful',
-    moodEmoji: '🥰',
-    energyLevel: 'Moderate',
-    journalText: 'Felt tiny baby kicks right after drinking cold orange juice. Brought tears of pure happiness to my eyes!',
-  },
-  {
-    id: 'mlog-2',
-    dateStr: 'Oct 13, 08:30 PM',
-    week: 23,
-    moodId: 'tired',
-    moodLabel: 'Tired & Low Energy',
-    moodEmoji: '🥱',
-    energyLevel: 'Low',
-    journalText: 'Long workday on feet. Rested with legs elevated and listened to relaxing nursery lullabies.',
-  },
-];
+const DEFAULT_LOGS: MoodLogEntry[] = [];
 
 const STORAGE_KEY = 'aparai_mood_journal_v1';
 
@@ -258,33 +237,43 @@ export default function MoodTrackerScreen() {
           <Text style={styles.historyCount}>{logs.length} entries</Text>
         </View>
 
-        {logs.map((item) => (
-          <View key={item.id} style={styles.entryCard}>
-            <View style={styles.entryTopRow}>
-              <View style={styles.entryMoodPill}>
-                <Text style={styles.entryMoodEmoji}>{item.moodEmoji}</Text>
-                <Text style={styles.entryMoodLabel}>{item.moodLabel}</Text>
-                <Text style={styles.entryEnergyTag}>• {item.energyLevel} Energy</Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => handleDeleteEntry(item.id)}
-                style={styles.deleteBtn}
-                activeOpacity={0.7}
-              >
-                <Trash2 size={14} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.entryDate}>{item.dateStr} • Week {item.week}</Text>
-
-            {item.journalText && (
-              <View style={styles.entryJournalBox}>
-                <Text style={styles.entryJournalText}>"{item.journalText}"</Text>
-              </View>
-            )}
+        {logs.length === 0 ? (
+          <View style={styles.emptyStateCard}>
+            <Smile size={32} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No mood check-ins yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Select your mood and energy level above, add your reflections, and tap save to begin your emotional wellness journal.
+            </Text>
           </View>
-        ))}
+        ) : (
+          logs.map((item) => (
+            <View key={item.id} style={styles.entryCard}>
+              <View style={styles.entryTopRow}>
+                <View style={styles.entryMoodPill}>
+                  <Text style={styles.entryMoodEmoji}>{item.moodEmoji}</Text>
+                  <Text style={styles.entryMoodLabel}>{item.moodLabel}</Text>
+                  <Text style={styles.entryEnergyTag}>• {item.energyLevel} Energy</Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => handleDeleteEntry(item.id)}
+                  style={styles.deleteBtn}
+                  activeOpacity={0.7}
+                >
+                  <Trash2 size={14} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.entryDate}>{item.dateStr} • Week {item.week}</Text>
+
+              {item.journalText && (
+                <View style={styles.entryJournalBox}>
+                  <Text style={styles.entryJournalText}>"{item.journalText}"</Text>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -548,5 +537,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3B0764',
     lineHeight: 17,
+  },
+  emptyStateCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+    marginVertical: 8,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

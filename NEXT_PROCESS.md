@@ -165,3 +165,58 @@ Run `npx prisma db push` to synchronize with Neon.
 - **Email Service**: Brevo SMTP (Transactional OTP delivery)
 - **Expo Dev Server**: Running on Tunnel (`npx expo start --tunnel`)
 - **Web Admin Portal**: Running on Vite (`npm run dev`)
+
+---
+
+## 5. Reference Design Transformation (21-Screen Mother UI)
+
+### 🎨 Visual Identity & Assets Deployed
+- **Heart Brand Logo** (`assets/aparai_heart_logo.jpg`): Pink-rose emblem with mother & infant silhouette.
+- **Pregnant Mother Hero** (`assets/pregnant_mother_hero.jpg`): High-res watercolor illustration cradling bump.
+- **Circular Baby Womb Illustration** (`assets/baby_fetus_week.jpg`): Fetus in warm womb with gentle floral aura.
+- **Mother Avatar** (`assets/mother_avatar.jpg`): Circular portrait for Priya Sharma in dashboard, journal & profile.
+
+### 📱 Screen Implementation Status (100% Feature Preservation)
+1. **Screen 1 & 2 (Splash & Welcome)**:
+   - AparaiTech brand emblem + "Healthy Mother • Brighter Tomorrow"
+   - Framed `pregnant_mother_hero.jpg` hero container
+   - 3 Feature Pills: Trusted Info (OB-GYN), Daily Track (Kicks/Vitals), Support Always (24/7 AI)
+   - "Get Started" and "Sign In" actions
+2. **Screen 3 (Login)**:
+   - AparaiTech heart logo + "Welcome Back / Sign in to continue your journey"
+   - Email/Phone mode toggle with live validation
+   - Password input with Eye/EyeOff toggle & "Forgot Password?"
+   - High-contrast pink "Sign In" CTA + Google & Apple social sign-in buttons
+3. **Screen 4 (Sign Up)**:
+   - AparaiTech logo + "Create Your Account"
+   - Name, Email (@gmail.com validation), strong password checklist, Confirm Password
+   - Terms & Privacy checkbox + "Create Account"
+4. **Screen 5 (Pregnancy Setup)**:
+   - `Setup Profile` header with `1 / 4` progress badge and 25% bar
+   - EDD vs LMP method toggle
+   - Gestational week stepper with live fruit size preview
+   - Height, Weight, Blood Group chips (O+, A+, B+, etc.)
+   - Saves directly to Neon Cloud PostgreSQL
+5. **Screen 6 (Mother Dashboard)**:
+   - Header: `mother_avatar.jpg` avatar + "Good Morning, Priya" + Notification Bell with red badge + Emergency SOS
+   - Dual Hero Card: Circular ring with `baby_fetus_week.jpg` (Week 20, 139 days left) + Banana fruit size (26 cm, 300 g)
+   - Today's Progress: 3 side-by-side metric cards (Steps: 3,650/8,000, Water: 5/8 gls, Sleep: 7h 20m)
+   - Quick Trackers row: Kicks, Steps, Water, Weight, Symptoms, Vault, Support
+   - Tab Bar: `[Home] [Track] [Appointments] [Reports] [Profile]`
+6. **Screen 7 (Week 20 Development)**:
+   - Hero banner with `baby_fetus_week.jpg`
+   - Week 20 pill + 3 Metric Chips (Banana, 26 cm, 300 g)
+   - Organ & sensory milestone checklist (Hearing, Swallowing, Vernix)
+7. **Screen 8–14 (Daily Trackers)**:
+   - Daily Tracking overview (`track.tsx`)
+   - Cardiff Kick Counter (`movement.tsx`) with 10-kick countdown and timer
+   - Symptoms Logger (`symptoms.tsx`) with severity & obstetric red-flag warnings
+   - Gestational Weight Tracker (`weight.tsx`) with gain curves
+   - My Appointments (`calendar.tsx`) with doctor & clinic details
+   - Medical Documents Vault (`vault/index.tsx`)
+   - Personal Mood & Reflections Journal (`mood.tsx`)
+8. **Screen 15–21 (Safety, Reports & Settings)**:
+   - Emergency SOS Modal with 108 speed dial & obstetric triage
+   - Generate Report (`reports.tsx`) with WhatsApp & Email sharing
+   - Profile & Settings (`profile.tsx`) with `mother_avatar.jpg`, due date & partner code
+

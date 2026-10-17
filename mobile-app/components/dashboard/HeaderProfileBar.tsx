@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Bell, Users } from 'lucide-react-native';
 import { useNotificationStore } from '../../store/notification.store';
 
@@ -29,10 +29,14 @@ export function HeaderProfileBar({
   return (
     <View style={styles.container}>
       <View style={styles.leftCol}>
-        <View style={styles.greetingRow}>
+        <Image
+          source={require('../../assets/mother_avatar.jpg')}
+          style={styles.avatarImage}
+        />
+        <View style={styles.userInfoCol}>
           <Text style={styles.greetingText}>{greeting}, {userName}</Text>
+          <Text style={styles.babySubtitle}>Nurturing {babyNickname}</Text>
         </View>
-        <Text style={styles.babySubtitle}>Nurturing {babyNickname}</Text>
       </View>
 
       <View style={styles.rightActions}>
@@ -92,6 +96,19 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   leftCol: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#FEE2E6',
+  },
+  userInfoCol: {
     flex: 1,
   },
   greetingRow: {

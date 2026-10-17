@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 
 interface BabyGrowthHeroProps {
   week: number;
@@ -49,29 +49,38 @@ export function BabyGrowthHero({
         </TouchableOpacity>
       </View>
 
-      {/* Main Content Layout */}
-      <View style={styles.bodyLayout}>
-        <View style={styles.fruitOrb}>
-          <Text style={styles.fruitEmoji}>{emoji}</Text>
+      {/* Hero Fetus Centerpiece Banner (Screen 7) */}
+      <View style={styles.fetusBannerContainer}>
+        <Image
+          source={require('../../assets/baby_fetus_week.jpg')}
+          style={styles.fetusCenterImage}
+          resizeMode="cover"
+        />
+      </View>
+
+      {/* 3 Metric Pills (Screen 7: Banana, 26 cm, 300 g) */}
+      <View style={styles.threeMetricsRow}>
+        <View style={styles.metricChip}>
+          <Text style={styles.metricChipEmoji}>{emoji}</Text>
+          <View>
+            <Text style={styles.metricChipLabel}>Baby Size</Text>
+            <Text style={styles.metricChipValue}>{fruit}</Text>
+          </View>
         </View>
 
-        <View style={styles.detailsCol}>
-          <Text style={styles.subTitle}>BABY SIZE COMPARISON</Text>
-          <Text style={styles.fruitTitle}>
-            Size of a <Text style={styles.fruitName}>{fruit}</Text>
-          </Text>
+        <View style={styles.metricChip}>
+          <Text style={styles.metricChipEmoji}>📏</Text>
+          <View>
+            <Text style={styles.metricChipLabel}>Length</Text>
+            <Text style={styles.metricChipValue}>{length}</Text>
+          </View>
+        </View>
 
-          {/* Metric Badges */}
-          <View style={styles.metricsRow}>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Length</Text>
-              <Text style={styles.metricValue}>{length}</Text>
-            </View>
-            <View style={styles.metricDivider} />
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Weight</Text>
-              <Text style={styles.metricValue}>{weight}</Text>
-            </View>
+        <View style={styles.metricChip}>
+          <Text style={styles.metricChipEmoji}>⚖️</Text>
+          <View>
+            <Text style={styles.metricChipLabel}>Weight</Text>
+            <Text style={styles.metricChipValue}>{weight}</Text>
           </View>
         </View>
       </View>
@@ -164,76 +173,52 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontWeight: '700',
   },
-  bodyLayout: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  fetusBannerContainer: {
+    width: '100%',
+    height: 180,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
     marginBottom: 14,
-  },
-  fruitOrb: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  fruitEmoji: {
-    fontSize: 34,
+  fetusCenterImage: {
+    width: '100%',
+    height: '100%',
   },
-  detailsCol: {
+  threeMetricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 14,
+  },
+  metricChip: {
     flex: 1,
-  },
-  subTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    color: '#94A3B8',
-    marginBottom: 2,
-  },
-  fruitTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.3,
-    marginBottom: 8,
-  },
-  fruitName: {
-    color: '#BE123C',
-  },
-  metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    alignSelf: 'flex-start',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
   },
-  metricItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  metricChipEmoji: {
+    fontSize: 20,
   },
-  metricLabel: {
-    fontSize: 10.5,
+  metricChipLabel: {
+    fontSize: 9.5,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  metricValue: {
-    fontSize: 11.5,
+  metricChipValue: {
+    fontSize: 12,
     fontWeight: '800',
     color: '#0F172A',
-  },
-  metricDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: '#CBD5E1',
-    marginHorizontal: 8,
   },
   headlineBox: {
     backgroundColor: '#FAFAF9',

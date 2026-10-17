@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { ChevronRight, Sparkles, Calendar } from 'lucide-react-native';
 
 interface UnifiedMilestoneCardProps {
@@ -77,9 +77,22 @@ export function UnifiedMilestoneCard({
         </View>
       </View>
 
-      {/* Hero Week & Progress Display */}
+      {/* Main Dual Hero: Left Fetus Circle + Right Baby Metrics */}
       <View style={styles.centerRow}>
-        <View style={styles.weekInfoCol}>
+        {/* Left Side: Circular Baby Womb Image */}
+        <View style={styles.fetusRingContainer}>
+          <Image
+            source={require('../../assets/baby_fetus_week.jpg')}
+            style={styles.fetusImage}
+            resizeMode="cover"
+          />
+          <View style={styles.weekFloatingBadge}>
+            <Text style={styles.weekFloatingBadgeText}>W{currentWeek}</Text>
+          </View>
+        </View>
+
+        {/* Right Side: Week Info & Fruit Size Card */}
+        <View style={styles.rightInfoCol}>
           <Text style={styles.weekHeroNumber}>
             Week {currentWeek}
             <Text style={styles.dayHeroNumber}>, Day {currentDay}</Text>
@@ -87,11 +100,19 @@ export function UnifiedMilestoneCard({
           <Text style={styles.dueDateText}>
             Due: <Text style={styles.dueDateHighlight}>{formattedDueDate}</Text>
           </Text>
-        </View>
 
-        <View style={styles.percentageCircle}>
-          <Text style={styles.percentageNumber}>{progressPercent}%</Text>
-          <Text style={styles.percentageLabel}>Complete</Text>
+          {/* Baby Size Pill */}
+          <View style={styles.fruitStrip}>
+            <Text style={styles.fruitEmoji}>{weekData.emoji}</Text>
+            <View style={styles.fruitTextCol}>
+              <Text style={styles.fruitTitle}>
+                Size of a {weekData.fruit}
+              </Text>
+              <Text style={styles.fruitMetrics}>
+                {weekData.length} • {weekData.weight}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -102,21 +123,8 @@ export function UnifiedMilestoneCard({
         </View>
         <View style={styles.milestoneRow}>
           <Text style={styles.milestoneText}>Conception</Text>
-          <Text style={styles.milestoneCenterText}>{elapsedDays} of 280 Days</Text>
+          <Text style={styles.milestoneCenterText}>{elapsedDays} of 280 Days ({progressPercent}%)</Text>
           <Text style={styles.milestoneText}>Birth (40 Wks)</Text>
-        </View>
-      </View>
-
-      {/* Integrated Baby Size Comparison Banner */}
-      <View style={styles.fruitStrip}>
-        <Text style={styles.fruitEmoji}>{weekData.emoji}</Text>
-        <View style={styles.fruitTextCol}>
-          <Text style={styles.fruitTitle}>
-            Baby is the size of an {weekData.fruit}
-          </Text>
-          <Text style={styles.fruitMetrics}>
-            Approx. {weekData.length} • {weekData.weight}
-          </Text>
         </View>
       </View>
 
@@ -128,7 +136,7 @@ export function UnifiedMilestoneCard({
       >
         <Sparkles size={14} color="#E11D48" />
         <Text style={styles.exploreActionText}>
-          Explore Week {currentWeek} Milestone Guide & Baby Development
+          Explore Week {currentWeek} Development & Ultrasound Guide
         </Text>
         <ChevronRight size={16} color="#E11D48" />
       </TouchableOpacity>
@@ -195,53 +203,76 @@ const styles = StyleSheet.create({
   },
   centerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    gap: 14,
+    marginBottom: 12,
   },
-  weekInfoCol: {
+  fetusRingContainer: {
+    width: 94,
+    height: 94,
+    borderRadius: 47,
+    borderWidth: 3,
+    borderColor: '#FECDD3',
+    padding: 3,
+    backgroundColor: '#FFF1F2',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#E11D48',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  fetusImage: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+  },
+  weekFloatingBadge: {
+    position: 'absolute',
+    bottom: -4,
+    backgroundColor: '#E11D48',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  weekFloatingBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  rightInfoCol: {
     flex: 1,
   },
   weekHeroNumber: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
   },
   dayHeroNumber: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
     color: '#64748B',
   },
   dueDateText: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#64748B',
     marginTop: 2,
+    marginBottom: 6,
   },
   dueDateHighlight: {
     fontWeight: '700',
     color: '#0F172A',
-  },
-  percentageCircle: {
-    backgroundColor: '#FFF1F2',
-    borderWidth: 1.5,
-    borderColor: '#FECDD3',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  percentageNumber: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#E11D48',
-  },
-  percentageLabel: {
-    fontSize: 8,
-    color: '#64748B',
-    fontWeight: '700',
-    textTransform: 'uppercase',
   },
   progressContainer: {
     marginBottom: 12,

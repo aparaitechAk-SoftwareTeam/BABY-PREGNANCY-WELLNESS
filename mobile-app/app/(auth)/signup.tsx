@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -235,16 +236,18 @@ export default function SignupScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brandHeader}>
-            <View style={styles.brandBadge}>
-              <Heart size={14} color="#E11D48" strokeWidth={2.5} />
-              <Text style={styles.brandBadgeText}>AparaiTech Wellness</Text>
-            </View>
+            <Image
+              source={require('../../assets/aparai_heart_logo.jpg')}
+              style={styles.brandLogoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandTitleText}>AparaiTech</Text>
           </View>
 
           <View style={styles.headerSection}>
-            <Text style={styles.screenHeading}>Join Our Community</Text>
+            <Text style={styles.screenHeading}>Create Your Account</Text>
             <Text style={styles.screenSubtitle}>
-              Create your account to start tracking your pregnancy journey with us.
+              Begin your personalized pregnancy companion
             </Text>
           </View>
 
@@ -631,6 +634,18 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     marginBottom: 16,
+  },
+  brandLogoImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    marginBottom: 6,
+  },
+  brandTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
   },
   brandBadge: {
     flexDirection: 'row',

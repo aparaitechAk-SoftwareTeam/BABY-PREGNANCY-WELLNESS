@@ -81,7 +81,7 @@ export default function MotherCalendar() {
         {/* Header Row */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.screenHeading}>Clinical Calendar</Text>
+            <Text style={styles.screenHeading}>My Appointments</Text>
             <Text style={styles.screenSubtitle}>
               Trimester {trimester} • {appointments.length} upcoming visits
             </Text>

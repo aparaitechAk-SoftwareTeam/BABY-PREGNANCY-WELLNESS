@@ -8,13 +8,14 @@ import {
   Dimensions,
   Platform,
   FlatList,
+  Image,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Heart, Activity, Leaf, Users, Sparkles, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { Heart, Activity, Leaf, Users, Sparkles, ChevronLeft, ChevronRight, Play, Pause, ShieldCheck, CheckCircle } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 44;
@@ -120,7 +121,7 @@ const SLIDES: SlideItem[] = [
 export default function WelcomeScreen() {
   const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0);
-  const [isAutoPlay, setIsAutoPlay] = useState(false); // Disabled by default to prevent freezing
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
   const flatListRef = useRef<FlatList<SlideItem>>(null);
   const optionsScrollRef = useRef<ScrollView>(null);
 
@@ -131,7 +132,6 @@ export default function WelcomeScreen() {
     const timer = setInterval(() => {
       setActiveSlide((prev) => {
         const next = (prev + 1) % SLIDES.length;
-        // Use setTimeout to prevent blocking animation frame
         setTimeout(() => {
           flatListRef.current?.scrollToIndex({
             index: next,
@@ -145,9 +145,7 @@ export default function WelcomeScreen() {
     return () => clearInterval(timer);
   }, [isAutoPlay]);
 
-  // Keep option pills in view when slide changes
   useEffect(() => {
-    // Scroll option pills slightly to ensure active pill is visible
     optionsScrollRef.current?.scrollTo({
       x: Math.max(0, activeSlide * 110 - 40),
       animated: true,
@@ -180,8 +178,6 @@ export default function WelcomeScreen() {
     }
   };
 
-  const currentSlide = SLIDES[activeSlide] || SLIDES[0];
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -191,7 +187,7 @@ export default function WelcomeScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Top Header / Brand Identity */}
+        {/* Top Header / Brand Identity with Logo */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
             <View style={styles.certBadge}>
@@ -200,35 +196,61 @@ export default function WelcomeScreen() {
             </View>
 
             <View style={styles.securePill}>
+              <ShieldCheck size={12} color="#059669" style={{ marginRight: 4 }} />
               <Text style={styles.securePillText}>HIPAA Safe</Text>
             </View>
           </View>
 
           <View style={styles.logoRow}>
-            <View style={styles.logoIconCircle}>
-              <Heart size={26} color="#E11D48" strokeWidth={2} />
-            </View>
+            <Image
+              source={require('../../assets/aparai_heart_logo.jpg')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <View style={styles.logoTextCol}>
               <View style={styles.brandTitleRow}>
                 <Text style={styles.brandTitle}>AparaiTech</Text>
                 <View style={styles.wellnessTag}>
-                  <Text style={styles.wellnessTagText}>PLUS</Text>
+                  <Text style={styles.wellnessTagText}>WELLNESS</Text>
                 </View>
               </View>
-              <Text style={styles.brandSubtitle}>Maternal & Pregnancy Wellness</Text>
+              <Text style={styles.brandSubtitle}>Healthy Mother • Brighter Tomorrow</Text>
             </View>
           </View>
         </View>
 
-        {/* Hero Pitch Headline */}
-        <View style={styles.heroSection}>
-          <Text style={styles.heroHeadline}>
-            Every Heartbeat,{'\n'}
-            <Text style={styles.heroHighlightText}>Every Precious Step.</Text>
-          </Text>
-          <Text style={styles.heroDescription}>
-            Your compassionate clinical companion for week-by-week guidance, vitals monitoring, and shared joy.
-          </Text>
+        {/* Hero Illustration Card (Matching Screen 1 & 2) */}
+        <View style={styles.heroCardContainer}>
+          <Image
+            source={require('../../assets/pregnant_mother_hero.jpg')}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.heroOverlayPill}>
+            <Text style={styles.heroOverlayText}>Your Pregnancy Journey With You</Text>
+            <Text style={styles.heroOverlaySub}>Track • Learn • Stay Healthy With Expert Support</Text>
+          </View>
+        </View>
+
+        {/* 3 Core Benefit Highlights (Reference Screen 2) */}
+        <View style={styles.threePillRow}>
+          <View style={styles.featurePill}>
+            <Text style={styles.featurePillIcon}>🌸</Text>
+            <Text style={styles.featurePillTitle}>Trusted Info</Text>
+            <Text style={styles.featurePillSub}>OB-GYN Vetted</Text>
+          </View>
+
+          <View style={styles.featurePill}>
+            <Text style={styles.featurePillIcon}>📊</Text>
+            <Text style={styles.featurePillTitle}>Daily Track</Text>
+            <Text style={styles.featurePillSub}>Kicks & Vitals</Text>
+          </View>
+
+          <View style={styles.featurePill}>
+            <Text style={styles.featurePillIcon}>💬</Text>
+            <Text style={styles.featurePillTitle}>Support Always</Text>
+            <Text style={styles.featurePillSub}>24/7 AI Companion</Text>
+          </View>
         </View>
 
         {/* Interactive Feature Slider Section */}
@@ -603,27 +625,98 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     marginRight: 12,
+  },
+  heroCardContainer: {
+    width: '100%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#E11D48',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  heroImage: {
+    width: '100%',
+    height: 220,
+  },
+  heroOverlayPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  heroOverlayText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  heroOverlaySub: {
+    fontSize: 12.5,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 3,
+  },
+  threePillRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 20,
+  },
+  featurePill: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     ...Platform.select({
       ios: {
         shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 2,
+        elevation: 1,
       },
     }),
+  },
+  featurePillIcon: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  featurePillTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  featurePillSub: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 2,
   },
   logoTextCol: {
     flex: 1,

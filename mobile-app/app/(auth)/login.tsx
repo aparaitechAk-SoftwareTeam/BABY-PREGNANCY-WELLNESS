@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -152,16 +153,18 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brandHeader}>
-            <View style={styles.brandBadge}>
-              <Heart size={14} color="#E11D48" strokeWidth={2.5} />
-              <Text style={styles.brandBadgeText}>AparaiTech Wellness</Text>
-            </View>
+            <Image
+              source={require('../../assets/aparai_heart_logo.jpg')}
+              style={styles.brandLogoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandTitleText}>AparaiTech</Text>
           </View>
 
           <View style={styles.headerSection}>
             <Text style={styles.screenHeading}>Welcome Back</Text>
             <Text style={styles.screenSubtitle}>
-              Sign in to your maternal sanctuary to track vitals and baby milestones.
+              Sign in to continue your journey
             </Text>
           </View>
 
@@ -329,7 +332,7 @@ export default function LoginScreen() {
                 </View>
               ) : (
                 <View style={styles.submitContent}>
-                  <Text style={styles.submitButtonText}>Sign In to Dashboard</Text>
+                  <Text style={styles.submitButtonText}>Sign In</Text>
                   <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.5} style={{ marginLeft: 8 }} />
                 </View>
               )}
@@ -382,12 +385,12 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.signupPromptRow}>
-            <Text style={styles.signupPromptText}>New to AparaiTech? </Text>
+            <Text style={styles.signupPromptText}>Don't have an account? </Text>
             <TouchableOpacity
               onPress={() => router.push('/(auth)/signup')}
               activeOpacity={0.7}
             >
-              <Text style={styles.signupLinkText}>Create Account</Text>
+              <Text style={styles.signupLinkText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
 
@@ -418,6 +421,18 @@ const styles = StyleSheet.create({
   brandHeader: {
     alignItems: 'center',
     marginBottom: 16,
+  },
+  brandLogoImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    marginBottom: 6,
+  },
+  brandTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
   },
   brandBadge: {
     flexDirection: 'row',

@@ -20,6 +20,7 @@ import { useAuthStore } from '../../store/auth.store';
 import {
   HeaderProfileBar,
   UnifiedMilestoneCard,
+  TodayProgressCards,
   QuickActionsGrid,
   TodayRemindersCard,
   UpcomingAppointmentAnnouncement,
@@ -140,7 +141,17 @@ export default function MotherDashboard() {
           onPressDetails={() => router.push(`/pregnancy/week/${currentWeek}` as any)}
         />
 
-        {/* 4. Quick Actions Grid (All 8 Essential Tools clearly visible without hidden scrolling) */}
+        {/* 4. Today's Progress: Steps, Water, Sleep (Screen 6) */}
+        <TodayProgressCards
+          stepsCurrent={3650}
+          stepsGoal={8000}
+          waterGlasses={Math.round(waterLoggedMl / 250)}
+          waterGoalGlasses={10}
+          sleepHours="7h 20m"
+          sleepQuality="Restful"
+        />
+
+        {/* 5. Quick Actions Grid (All 8 Essential Tools clearly visible without hidden scrolling) */}
         <QuickActionsGrid
           onKickCounterPress={handleKickCounter}
           onStepsPress={() => router.push('/tracking/steps')}

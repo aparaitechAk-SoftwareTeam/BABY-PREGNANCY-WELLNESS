@@ -9,3 +9,4 @@ export * from './TodayRemindersCard';
 export * from './ClinicalEscalationBanner';
 export * from './UpcomingAppointmentAnnouncement';
 export * from './SmartTimelineCard';
+export * from './TodayProgressCards';

@@ -291,19 +291,24 @@ export default function PregnancySetupScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand Header */}
-        <View style={styles.brandHeader}>
-          <View style={styles.brandBadge}>
-            <Heart size={14} color="#E11D48" fill="#E11D48" />
-            <Text style={styles.brandBadgeText}>AparaiTech Maternal Care</Text>
+        {/* Top Stepper Bar (Matching Reference Screen 5) */}
+        <View style={styles.stepperTopContainer}>
+          <View style={styles.stepperTopRow}>
+            <Text style={styles.stepperScreenTitle}>Setup Profile</Text>
+            <View style={styles.stepBadge}>
+              <Text style={styles.stepBadgeText}>1 / 4</Text>
+            </View>
+          </View>
+          <View style={styles.stepperTrack}>
+            <View style={[styles.stepperFill, { width: '25%' }]} />
           </View>
         </View>
 
         {/* Title */}
         <View style={styles.headerSection}>
-          <Text style={styles.screenHeading}>Personalize Your Journey</Text>
+          <Text style={styles.screenHeading}>Pregnancy Setup</Text>
           <Text style={styles.screenSubtitle}>
-            Welcome, {user?.name || 'Mother'}! Please provide your pregnancy dates, baseline health metrics, and doctor details.
+            Welcome, {user?.name || 'Mother'}! Enter your pregnancy dates & physical baselines to calibrate your daily tracking.
           </Text>
         </View>
 
@@ -931,25 +936,41 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40,
   },
-  brandHeader: {
-    alignItems: 'center',
-    marginBottom: 12,
+  stepperTopContainer: {
+    marginBottom: 16,
   },
-  brandBadge: {
+  stepperTopRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 6,
+    marginBottom: 8,
   },
-  brandBadgeText: {
-    fontSize: 12.5,
-    fontWeight: '700',
+  stepperScreenTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#0F172A',
+  },
+  stepBadge: {
+    backgroundColor: '#FEE2E6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  stepBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#E11D48',
+  },
+  stepperTrack: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  stepperFill: {
+    height: '100%',
+    backgroundColor: '#E11D48',
+    borderRadius: 3,
   },
   headerSection: {
     marginBottom: 18,

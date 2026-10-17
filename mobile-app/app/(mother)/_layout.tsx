@@ -43,13 +43,13 @@ export default function MotherTabsLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
+          title: 'Appointments',
           tabBarIcon: ({ focused, color }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
               <Calendar size={22} color={color} strokeWidth={2.5} />
             </View>
           ),
-          tabBarLabel: 'Calendar',
+          tabBarLabel: 'Appointments',
         }}
       />
       <Tabs.Screen

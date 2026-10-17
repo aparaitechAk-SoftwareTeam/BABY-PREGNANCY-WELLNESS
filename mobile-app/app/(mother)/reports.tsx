@@ -169,7 +169,7 @@ AparaiTech v1.0 • Medical Grade Encryption
         {/* Header Row */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.screenHeading}>Clinical Reports</Text>
+            <Text style={styles.screenHeading}>Generate Report</Text>
             <Text style={styles.screenSubtitle}>
               Week {currentWeek} • Trimester {trimester}
             </Text>

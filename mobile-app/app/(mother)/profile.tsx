@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -137,9 +138,10 @@ export default function MotherProfile() {
         {/* 1. Profile Identity Hero Card */}
         <View style={styles.profileHeroCard}>
           <View style={styles.avatarRow}>
-            <View style={styles.avatarCircle}>
-              <Heart size={28} color="#E11D48" strokeWidth={2} />
-            </View>
+            <Image
+              source={require('../../assets/mother_avatar.jpg')}
+              style={styles.avatarImage}
+            />
             <View style={styles.profileInfoCol}>
               <Text style={styles.userName}>{user?.name || 'Mama'}</Text>
               <Text style={styles.userEmail}>{user?.email || 'mother@aparaitech.com'}</Text>
@@ -510,6 +512,14 @@ const styles = StyleSheet.create({
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2.5,
+    borderColor: '#FECDD3',
+    marginRight: 14,
   },
   avatarCircle: {
     width: 60,

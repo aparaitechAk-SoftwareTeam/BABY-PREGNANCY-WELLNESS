@@ -1,17 +1,37 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Default to machine IP so physical Expo devices on the same Wi-Fi can reach the NestJS backend
-const DEFAULT_API_URL = Platform.select({
-  web: 'http://localhost:3000/api',
-  android: 'http://192.168.1.5:3000/api',
-  ios: 'http://192.168.1.5:3000/api',
-  default: 'http://localhost:3000/api',
-});
+// Determine the most accurate backend URL for the current testing environment
+const resolveBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000/api';
+  }
+
+  // Extract host IP dynamically from Expo's Metro server connection
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any).manifest?.debuggerHost ||
+    (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+
+  if (hostUri) {
+    const hostIp = hostUri.split(':')[0];
+    if (hostIp && !hostIp.includes('exp.direct') && !hostIp.includes('localhost') && hostIp !== '127.0.0.1') {
+      return `http://${hostIp}:3000/api`;
+    }
+  }
+
+  // Active Wi-Fi interface IP for testing
+  return 'http://10.47.171.247:3000/api';
+};
 
 export const apiClient = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL,
+  baseURL: resolveBaseUrl(),
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

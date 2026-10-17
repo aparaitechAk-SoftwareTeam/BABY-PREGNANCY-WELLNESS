@@ -18,9 +18,9 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`\n==============================================`);
-  console.log(`🚀 AparaiTech Care Backend running on: http://localhost:${port}/api`);
+  console.log(`🚀 AparaiTech Care Backend running on: http://0.0.0.0:${port}/api`);
   console.log(`==============================================\n`);
 }
 bootstrap();

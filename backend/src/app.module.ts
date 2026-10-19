@@ -8,6 +8,7 @@ import { PregnancyContentModule } from './pregnancy-content/pregnancy-content.mo
 import { UsersModule } from './users/users.module';
 import { SupportModule } from './support/support.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { FamilySharingModule } from './family-sharing/family-sharing.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
     UsersModule,
     SupportModule,
     AppointmentsModule,
+    FamilySharingModule,
   ],
   controllers: [],
   providers: [],

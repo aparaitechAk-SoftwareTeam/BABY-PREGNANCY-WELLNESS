@@ -14,24 +14,50 @@ import { StatusBar } from 'expo-status-bar';
 import { Calendar, MapPin, Clock, User } from 'lucide-react-native';
 import { useAppointmentStore } from '../../store/appointment.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useFamilyStore } from '../../store/family.store';
 
 export default function CaregiverCalendar() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollOffsetY = React.useRef(new Animated.Value(0)).current;
   const appointments = useAppointmentStore((state) => state.appointments);
+  const fetchLiveAppointments = useAppointmentStore((state) => state.fetchLiveAppointments);
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
+  const motherLiveData = useFamilyStore((state) => state.motherLiveData);
+  const fetchMotherLiveData = useFamilyStore((state) => state.fetchMotherLiveData);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Derive appointments from paired mother's live DB records if available
+  const displayAppointments = React.useMemo(() => {
+    if (motherLiveData?.appointments && motherLiveData.appointments.length > 0) {
+      return motherLiveData.appointments.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        type: 'Routine',
+        doctorName: a.doctorName || 'Doctor',
+        hospitalName: a.hospitalName || 'Clinic',
+        doctorPhone: a.doctorPhone || '',
+        dateStr: a.dateStr,
+        timeStr: a.timeStr,
+        isCompleted: a.status === 'COMPLETED',
+      }));
+    }
+    return appointments;
+  }, [motherLiveData?.appointments, appointments]);
+
+  const activeWeek = motherLiveData?.mother?.currentWeek || currentWeek || 20;
 
   // Scroll to top when screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      fetchMotherLiveData();
+      fetchLiveAppointments();
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, [fetchMotherLiveData, fetchLiveAppointments])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await Promise.allSettled([fetchMotherLiveData(), fetchLiveAppointments()]);
     setIsRefreshing(false);
   };
 
@@ -60,7 +86,7 @@ export default function CaregiverCalendar() {
           <View>
             <Text style={styles.screenHeading}>Caregiver Appointments</Text>
             <Text style={styles.screenSubtitle}>
-              Week {currentWeek || 20} • Synced visits with mother's care team
+              Week {activeWeek || 20} • Synced visits with mother's care team
             </Text>
           </View>
         </View>
@@ -71,7 +97,7 @@ export default function CaregiverCalendar() {
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </Text>
           <Text style={styles.monthSubtitle}>
-            Week {currentWeek || 20} - Week {(currentWeek || 20) + 2}
+            Week {activeWeek || 20} - Week {(activeWeek || 20) + 2}
           </Text>
         </View>
 
@@ -79,12 +105,12 @@ export default function CaregiverCalendar() {
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Mother's Upcoming Appointments</Text>
 
-          {appointments.length === 0 ? (
+          {displayAppointments.length === 0 ? (
             <View style={{ backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, alignItems: 'center' }}>
               <Text style={{ fontSize: 13, color: '#64748B' }}>No appointments scheduled by mother yet</Text>
             </View>
           ) : (
-            appointments.map((item) => (
+            displayAppointments.map((item) => (
               <View key={item.id} style={styles.appointmentCard}>
                 <View style={styles.dateColumn}>
                   <Text style={styles.dayNumber}>{item.dateStr.slice(0, 3)}</Text>

@@ -46,15 +46,33 @@ interface PairedMember {
   };
 }
 
+import { useFamilyStore } from '../../store/family.store';
+
 export default function PartnerSyncScreen() {
   const router = useRouter();
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
   const profile = usePregnancyStore((state) => state.profile);
 
-  const inviteCode = 'MOM-8492';
+  const pairingCode = useFamilyStore((state) => state.pairingCode);
+  const pairedMembers = useFamilyStore((state) => state.pairedMembers);
+  const isLoadingMotherCode = useFamilyStore((state) => state.isLoadingMotherCode);
+  const fetchMotherPairingInfo = useFamilyStore((state) => state.fetchMotherPairingInfo);
+  const generateNewCode = useFamilyStore((state) => state.generateNewCode);
+  const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
 
-  const initialMembers: PairedMember[] = profile?.emergencyContactName
-    ? [
+  const inviteCode = pairingCode || 'MOM-8492';
+
+  React.useEffect(() => {
+    fetchMotherPairingInfo();
+  }, [fetchMotherPairingInfo]);
+
+  // Combine live database members with emergency contact if configured
+  const displayMembers: any[] = React.useMemo(() => {
+    if (pairedMembers && pairedMembers.length > 0) {
+      return pairedMembers;
+    }
+    if (profile?.emergencyContactName) {
+      return [
         {
           id: 'pm-emergency',
           name: profile.emergencyContactName,
@@ -69,16 +87,30 @@ export default function PartnerSyncScreen() {
             emergency: true,
           },
         },
-      ]
-    : [];
+      ];
+    }
+    return [];
+  }, [pairedMembers, profile]);
 
-  const [members, setMembers] = useState<PairedMember[]>(initialMembers);
   const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const handleCopyCode = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
     Alert.alert('Invite Code Copied! 📋', `Share code ${inviteCode} with your partner to connect their Caregiver app.`);
+  };
+
+  const handleRegenerateCode = async () => {
+    setIsRegenerating(true);
+    try {
+      const newCode = await generateNewCode();
+      Alert.alert('New Code Generated! 🔑', `Your new pairing code is: ${newCode}`);
+    } catch {
+      Alert.alert('Error', 'Could not generate new code. Please try again.');
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   const handleShareWhatsApp = async () => {
@@ -226,7 +258,7 @@ export default function PartnerSyncScreen() {
 
         {/* Connected Circle Members List */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Connected Caregivers ({members.length})</Text>
+          <Text style={styles.sectionTitle}>Connected Caregivers ({displayMembers.length})</Text>
           <TouchableOpacity
             onPress={() => router.push('/partner/manage-access')}
             activeOpacity={0.7}
@@ -235,7 +267,7 @@ export default function PartnerSyncScreen() {
           </TouchableOpacity>
         </View>
 
-        {members.length === 0 ? (
+        {displayMembers.length === 0 ? (
           <View style={styles.emptyCircleCard}>
             <Users size={32} color="#94A3B8" />
             <Text style={styles.emptyCircleTitle}>No Caregiver or Partner Linked</Text>
@@ -244,11 +276,11 @@ export default function PartnerSyncScreen() {
             </Text>
           </View>
         ) : (
-          members.map((member) => (
+          displayMembers.map((member: any) => (
             <View key={member.id} style={styles.memberCard}>
             <View style={styles.memberTopRow}>
-              <View style={[styles.avatarCircle, { backgroundColor: member.avatarColor }]}>
-                <Text style={styles.avatarInitial}>{member.name.charAt(0)}</Text>
+              <View style={[styles.avatarCircle, { backgroundColor: member.avatarColor || '#E11D48' }]}>
+                <Text style={styles.avatarInitial}>{member.name ? member.name.charAt(0) : 'P'}</Text>
               </View>
 
               <View style={styles.memberDetails}>

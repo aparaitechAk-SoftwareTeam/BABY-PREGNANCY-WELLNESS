@@ -14,38 +14,44 @@ import { Heart, Droplet, Brain, Footprints, CheckCircle2, Clock } from 'lucide-r
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useRoutineStore } from '../../store/routine.store';
 import { useStepsStore } from '../../store/steps.store';
+import { useFamilyStore } from '../../store/family.store';
 
 export default function CaregiverTrack() {
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollOffsetY = React.useRef(new Animated.Value(0)).current;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const motherLiveData = useFamilyStore((state) => state.motherLiveData);
+  const fetchMotherLiveData = useFamilyStore((state) => state.fetchMotherLiveData);
+
   const profile = usePregnancyStore((state) => state.profile);
-  const currentWeek = usePregnancyStore((state) => state.currentWeek);
-  const trimester = usePregnancyStore((state) => state.trimester);
+  const currentWeek = motherLiveData?.mother?.currentWeek || usePregnancyStore((state) => state.currentWeek) || 20;
+  const trimester = motherLiveData?.mother?.trimester || usePregnancyStore((state) => state.trimester) || 2;
 
   const routineTasks = useRoutineStore((state) => state.tasks);
   const completedRoutineTasks = routineTasks.filter((t) => t.isCompleted);
 
-  const todaySteps = useStepsStore((state) => state.todaySteps);
-  const stepGoal = useStepsStore((state) => state.stepGoal);
-  const distanceKm = useStepsStore((state) => state.distanceKm);
-  const activeMinutes = useStepsStore((state) => state.activeMinutes);
-  const caloriesKcal = useStepsStore((state) => state.caloriesKcal);
+  const todaySteps = motherLiveData?.today?.steps ?? useStepsStore((state) => state.todaySteps);
+  const stepGoal = motherLiveData?.today?.stepGoal ?? useStepsStore((state) => state.stepGoal);
+  const distanceKm = motherLiveData?.today?.distanceKm ?? useStepsStore((state) => state.distanceKm);
+  const activeMinutes = motherLiveData?.today?.activeMinutes ?? useStepsStore((state) => state.activeMinutes);
+  const caloriesKcal = motherLiveData?.today?.caloriesKcal ?? useStepsStore((state) => state.caloriesKcal);
   const stepPercentage = stepGoal > 0 ? Math.min(100, Math.round((todaySteps / stepGoal) * 100)) : 0;
 
   // Scroll to top and refresh when screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      fetchMotherLiveData();
       useStepsStore.getState().loadTodaySteps();
       useRoutineStore.getState().loadTasks(currentWeek);
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [currentWeek])
+    }, [currentWeek, fetchMotherLiveData])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await Promise.allSettled([
+      fetchMotherLiveData(),
       useStepsStore.getState().loadTodaySteps(),
       useRoutineStore.getState().loadTasks(currentWeek),
     ]);
@@ -152,7 +158,7 @@ export default function CaregiverTrack() {
             <View style={styles.vitalInfo}>
               <Text style={styles.vitalLabel}>Weight & BP</Text>
               <Text style={styles.vitalValue}>
-                {profile?.currentWeight ? `${profile.currentWeight} kg` : '--'} • 120/80 mmHg
+                {motherLiveData?.mother?.currentWeight ? `${motherLiveData.mother.currentWeight} kg` : (profile?.currentWeight ? `${profile.currentWeight} kg` : '--')} • 120/80 mmHg
               </Text>
               <Text style={styles.vitalTime}>Healthy gestational range</Text>
             </View>
@@ -166,12 +172,12 @@ export default function CaregiverTrack() {
             <View style={styles.vitalInfo}>
               <Text style={styles.vitalLabel}>Hydration & Wellness</Text>
               <Text style={styles.vitalValue}>
-                {routineTasks.find((t) => t.id === 'water-goal')?.isCompleted ? 'Goal Met (2.5L)' : 'Logging in Progress'}
+                {motherLiveData?.today?.waterMl ? `${motherLiveData.today.waterMl} ml / ${motherLiveData.today.waterGoalMl || 2500} ml` : 'Logging in Progress'}
               </Text>
               <Text style={styles.vitalTime}>ACOG Recommended intake</Text>
             </View>
             <Text style={styles.vitalStatus}>
-              {routineTasks.find((t) => t.id === 'water-goal')?.isCompleted ? 'Optimal' : 'Active'}
+              {motherLiveData?.today?.waterPercentage && motherLiveData.today.waterPercentage >= 80 ? 'Optimal' : 'Active'}
             </Text>
           </View>
         </View>

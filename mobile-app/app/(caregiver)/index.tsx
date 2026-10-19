@@ -7,11 +7,33 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Heart, Users, Calendar, Bell, LogOut, ListTodo, CheckCircle2, Circle, Footprints, Sparkles, FolderLock, Car, Briefcase } from 'lucide-react-native';
+import {
+  Heart,
+  Users,
+  Calendar,
+  Bell,
+  LogOut,
+  ListTodo,
+  CheckCircle2,
+  Circle,
+  Footprints,
+  Sparkles,
+  FolderLock,
+  Car,
+  Briefcase,
+  AlertTriangle,
+  Link2,
+  Droplets,
+  Moon,
+  Activity,
+} from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useRoutineStore } from '../../store/routine.store';
@@ -19,6 +41,7 @@ import { useStepsStore } from '../../store/steps.store';
 import { useFamilyTasksStore } from '../../store/family-tasks.store';
 import { useBirthPrepStore } from '../../store/birth-prep.store';
 import { useNotificationStore } from '../../store/notification.store';
+import { useFamilyStore } from '../../store/family.store';
 import {
   CaregiverStatsCard,
   CaregiverStatusBanner,
@@ -38,14 +61,62 @@ export default function CaregiverHome() {
   const daysRemaining = usePregnancyStore((state) => state.daysRemaining);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showSOSModal, setShowSOSModal] = useState(false);
+  const [pairingInput, setPairingInput] = useState('');
+
+  // Family Store (Live Mother Pairing)
+  const isCaregiverPaired = useFamilyStore((state) => state.isCaregiverPaired);
+  const motherLiveData = useFamilyStore((state) => state.motherLiveData);
+  const isLoadingMotherData = useFamilyStore((state) => state.isLoadingMotherData);
+  const isPairingSubmitting = useFamilyStore((state) => state.isPairingSubmitting);
+  const fetchCaregiverStatus = useFamilyStore((state) => state.fetchCaregiverStatus);
+  const fetchMotherLiveData = useFamilyStore((state) => state.fetchMotherLiveData);
+  const pairWithMother = useFamilyStore((state) => state.pairWithMother);
+
+  // Computed Active Mother Metrics (Live from Neon DB if paired, fallback to local)
+  const activeMotherName =
+    motherLiveData?.mother?.nickname ||
+    motherLiveData?.mother?.name ||
+    (pregnancyProfile?.nickname ? `${pregnancyProfile.nickname}'s Mother` : user?.partnerName || 'Mother');
+
+  const activeWeek = motherLiveData?.mother?.currentWeek || currentWeek || 20;
+  const activeDaysRemaining = motherLiveData?.mother?.daysRemaining || daysRemaining || 140;
+  const activeWeight = motherLiveData?.mother?.currentWeight
+    ? `${motherLiveData.mother.currentWeight} kg`
+    : pregnancyProfile?.currentWeight
+    ? `${pregnancyProfile.currentWeight} kg`
+    : '--';
+  const activeHeight =
+    motherLiveData?.mother?.heightFt ||
+    (motherLiveData?.mother?.height ? `${motherLiveData.mother.height} cm` : null) ||
+    pregnancyProfile?.heightFt ||
+    (pregnancyProfile?.height ? `${pregnancyProfile.height} cm` : '--');
+  const activeAge = motherLiveData?.mother?.motherAge
+    ? `${motherLiveData.mother.motherAge} years`
+    : pregnancyProfile?.motherAge
+    ? `${pregnancyProfile.motherAge} years`
+    : '--';
+  const activeDueDate = motherLiveData?.mother?.dueDate
+    ? new Date(motherLiveData.mother.dueDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : pregnancyProfile?.dueDate
+    ? new Date(pregnancyProfile.dueDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'Not set';
+  const activeBloodType = motherLiveData?.mother?.bloodGroup || pregnancyProfile?.bloodGroup || '--';
 
   const routineTasks = useRoutineStore((state) => state.tasks);
   const routineTotal = routineTasks.length;
   const routineCompleted = routineTasks.filter((t) => t.isCompleted).length;
   const routinePercentage = routineTotal > 0 ? Math.round((routineCompleted / routineTotal) * 100) : 0;
 
-  const todaySteps = useStepsStore((state) => state.todaySteps);
-  const stepGoal = useStepsStore((state) => state.stepGoal);
+  const todaySteps = motherLiveData?.today?.steps ?? useStepsStore((state) => state.todaySteps);
+  const stepGoal = motherLiveData?.today?.stepGoal ?? useStepsStore((state) => state.stepGoal);
   const stepsPercentage = stepGoal > 0 ? Math.min(100, Math.round((todaySteps / stepGoal) * 100)) : 0;
 
   const familyTasks = useFamilyTasksStore((state) => state.tasks);
@@ -57,14 +128,30 @@ export default function CaregiverHome() {
   const toggleItemPacked = useBirthPrepStore((state) => state.toggleItemPacked);
   const unreadUpdates = useNotificationStore((state) => state.unreadCount);
 
+  const handlePairSubmit = async () => {
+    if (!pairingInput.trim()) {
+      Alert.alert('Pairing Code Required', 'Please enter the 6-character code (e.g. MOM-XXXX) provided by the mother.');
+      return;
+    }
+    const res = await pairWithMother(pairingInput.trim().toUpperCase());
+    if (res.success) {
+      Alert.alert('Connected! 🎉', res.message);
+      setPairingInput('');
+    } else {
+      Alert.alert('Connection Failed', res.message);
+    }
+  };
+
   const refreshCaregiverData = React.useCallback(async () => {
     await Promise.allSettled([
+      fetchCaregiverStatus(),
+      fetchMotherLiveData(),
       loadBirthPrepData(),
       useStepsStore.getState().loadTodaySteps(),
-      useRoutineStore.getState().loadTasks(currentWeek),
+      useRoutineStore.getState().loadTasks(activeWeek),
       useNotificationStore.getState().loadNotifications(),
     ]);
-  }, [currentWeek, loadBirthPrepData]);
+  }, [activeWeek, fetchCaregiverStatus, fetchMotherLiveData, loadBirthPrepData]);
 
   // Scroll to top and refresh when screen is focused
   useFocusEffect(
@@ -136,7 +223,9 @@ export default function CaregiverHome() {
           </View>
           <View style={styles.headerInfo}>
             <Text style={styles.welcomeTitle}>Welcome, {user?.name || 'Caregiver'}!</Text>
-            <Text style={styles.welcomeSubtitle}>Connected as caregiver</Text>
+            <Text style={styles.welcomeSubtitle}>
+              {isCaregiverPaired ? `Linked with ${activeMotherName}` : 'Caregiver Circle'}
+            </Text>
           </View>
 
           {/* SOS Emergency Button */}
@@ -159,10 +248,73 @@ export default function CaregiverHome() {
           </TouchableOpacity>
         </View>
 
+        {/* Pairing Code Card (Displayed when Caregiver is NOT paired yet) */}
+        {!isCaregiverPaired && (
+          <View style={styles.pairingCard}>
+            <View style={styles.pairingCardHeader}>
+              <View style={styles.pairingIconBadge}>
+                <Link2 size={20} color="#E11D48" strokeWidth={2.5} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.pairingCardTitle}>Link with Mother's Account</Text>
+                <Text style={styles.pairingCardSubtitle}>
+                  Enter the mother's 6-character invite code (e.g. MOM-8492) to view her live vitals.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.pairingInputRow}>
+              <TextInput
+                style={styles.pairingInput}
+                placeholder="Enter Code (e.g. MOM-XXXX)"
+                placeholderTextColor="#94A3B8"
+                value={pairingInput}
+                onChangeText={setPairingInput}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.pairingSubmitBtn}
+                onPress={handlePairSubmit}
+                disabled={isPairingSubmitting}
+                activeOpacity={0.8}
+              >
+                {isPairingSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.pairingSubmitBtnText}>Link</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.pairingHelperText}>
+              The mother can find her code in Profile → Family & Partner Circle.
+            </Text>
+          </View>
+        )}
+
+        {/* Clinical Alert Banner (If mother reported urgent symptoms) */}
+        {motherLiveData?.clinicalAlerts?.hasUrgentSymptom && (
+          <View style={styles.urgentAlertBanner}>
+            <AlertTriangle size={20} color="#DC2626" strokeWidth={2.5} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.urgentAlertTitle}>Clinical Red-Flag Alert</Text>
+              <Text style={styles.urgentAlertSub}>
+                The mother recorded an urgent symptom. Please check in on her immediately or call triage.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(caregiver)/track')}
+              style={styles.urgentAlertAction}
+            >
+              <Text style={styles.urgentAlertActionText}>Review</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Status Banner */}
         <CaregiverStatusBanner
-          motherName={pregnancyProfile?.nickname ? `${pregnancyProfile.nickname}'s Mother` : user?.partnerName || 'Mother'}
-          connectionStatus="connected"
+          motherName={activeMotherName}
+          connectionStatus={isCaregiverPaired ? 'connected' : 'pending'}
         />
 
         {/* Top Horizontal Appointment Announcement (Today / Upcoming) */}
@@ -178,75 +330,109 @@ export default function CaregiverHome() {
               <Heart size={24} color="#E11D48" strokeWidth={2} />
             </View>
             <View style={styles.motherNameSection}>
-              <Text style={styles.motherNameLabel}>Mother</Text>
-              <Text style={styles.motherName}>
-                {pregnancyProfile?.nickname
-                  ? `${pregnancyProfile.nickname}'s Mother`
-                  : user?.partnerName || 'Mother'}
-              </Text>
+              <Text style={styles.motherNameLabel}>Monitored Mother</Text>
+              <Text style={styles.motherName}>{activeMotherName}</Text>
             </View>
+            {isCaregiverPaired && (
+              <View style={styles.liveDbTag}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveDbTagText}>Live Cloud Sync</Text>
+              </View>
+            )}
           </View>
           
           <View style={styles.motherStatsRow}>
             <View style={styles.motherStatBox}>
-              <Text style={styles.motherStatLabel}>Current Week</Text>
-              <Text style={styles.motherStatValue}>{currentWeek || '--'}</Text>
+              <Text style={styles.motherStatLabel}>Gestational Week</Text>
+              <Text style={styles.motherStatValue}>Week {activeWeek}</Text>
             </View>
             <View style={styles.motherStatBox}>
               <Text style={styles.motherStatLabel}>Weight</Text>
-              <Text style={styles.motherStatValue}>
-                {pregnancyProfile?.currentWeight ? `${pregnancyProfile.currentWeight} kg` : '--'}
-              </Text>
+              <Text style={styles.motherStatValue}>{activeWeight}</Text>
             </View>
             <View style={styles.motherStatBox}>
               <Text style={styles.motherStatLabel}>Height</Text>
-              <Text style={styles.motherStatValue}>
-                {pregnancyProfile?.heightFt || (pregnancyProfile?.height ? `${pregnancyProfile.height} cm` : '--')}
-              </Text>
+              <Text style={styles.motherStatValue}>{activeHeight}</Text>
             </View>
           </View>
 
           <View style={styles.motherDetailsRow}>
             <View style={styles.motherDetailItem}>
               <Text style={styles.motherDetailLabel}>Age</Text>
-              <Text style={styles.motherDetailValue}>
-                {pregnancyProfile?.motherAge ? `${pregnancyProfile.motherAge} years` : '--'}
-              </Text>
+              <Text style={styles.motherDetailValue}>{activeAge}</Text>
             </View>
             <View style={styles.motherDetailItem}>
               <Text style={styles.motherDetailLabel}>Due Date</Text>
-              <Text style={styles.motherDetailValue}>
-                {pregnancyProfile?.dueDate
-                  ? new Date(pregnancyProfile.dueDate).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : 'Not set'}
-              </Text>
+              <Text style={styles.motherDetailValue}>{activeDueDate}</Text>
             </View>
             <View style={styles.motherDetailItem}>
               <Text style={styles.motherDetailLabel}>Blood Type</Text>
-              <Text style={styles.motherDetailValue}>{pregnancyProfile?.bloodGroup || '--'}</Text>
+              <Text style={styles.motherDetailValue}>{activeBloodType}</Text>
             </View>
           </View>
 
-          {/* Gentle Walking & Movement Summary */}
-          <View style={styles.caregiverStepStrip}>
-            <View style={styles.caregiverStepLeft}>
-              <Footprints size={15} color="#0D9488" strokeWidth={2.4} />
-              <Text style={styles.caregiverStepLabel}>Gentle Walking / Movement</Text>
+          {/* Live Vitals Quad Strip (Steps, Hydration, Sleep, Kicks) */}
+          <View style={styles.liveVitalsStrip}>
+            {/* Step Count */}
+            <View style={styles.liveVitalItem}>
+              <View style={[styles.liveVitalIconBox, { backgroundColor: '#CCFBF1' }]}>
+                <Footprints size={15} color="#0D9488" strokeWidth={2.4} />
+              </View>
+              <View style={styles.liveVitalTextCol}>
+                <Text style={styles.liveVitalLabel}>Gentle Movement</Text>
+                <Text style={styles.liveVitalValue}>
+                  {todaySteps.toLocaleString()} / {stepGoal.toLocaleString()} steps ({stepsPercentage}%)
+                </Text>
+              </View>
             </View>
-            <Text style={styles.caregiverStepValue}>
-              {todaySteps.toLocaleString()} / {stepGoal.toLocaleString()} steps ({stepsPercentage}%)
-            </Text>
+
+            {/* Hydration */}
+            <View style={styles.liveVitalItem}>
+              <View style={[styles.liveVitalIconBox, { backgroundColor: '#E0F2FE' }]}>
+                <Droplets size={15} color="#0284C7" strokeWidth={2.4} />
+              </View>
+              <View style={styles.liveVitalTextCol}>
+                <Text style={styles.liveVitalLabel}>Today's Hydration</Text>
+                <Text style={styles.liveVitalValue}>
+                  {motherLiveData?.today?.waterMl ?? 0} ml / {motherLiveData?.today?.waterGoalMl ?? 2500} ml ({motherLiveData?.today?.waterPercentage ?? 0}%)
+                </Text>
+              </View>
+            </View>
+
+            {/* Sleep */}
+            <View style={styles.liveVitalItem}>
+              <View style={[styles.liveVitalIconBox, { backgroundColor: '#F3E8FF' }]}>
+                <Moon size={15} color="#7E22CE" strokeWidth={2.4} />
+              </View>
+              <View style={styles.liveVitalTextCol}>
+                <Text style={styles.liveVitalLabel}>Rest & Sleep</Text>
+                <Text style={styles.liveVitalValue}>
+                  {motherLiveData?.today?.sleepHoursFormatted || 'Rest recorded'} ({motherLiveData?.today?.sleepQuality || 'Good'})
+                </Text>
+              </View>
+            </View>
+
+            {/* Kicks */}
+            {motherLiveData?.today?.kicks && (
+              <View style={styles.liveVitalItem}>
+                <View style={[styles.liveVitalIconBox, { backgroundColor: '#FFE4E6' }]}>
+                  <Activity size={15} color="#E11D48" strokeWidth={2.4} />
+                </View>
+                <View style={styles.liveVitalTextCol}>
+                  <Text style={styles.liveVitalLabel}>Cardiff Kick Counter</Text>
+                  <Text style={styles.liveVitalValue}>
+                    {motherLiveData.today.kicks.count} kicks recorded ({motherLiveData.today.kicks.durationFormatted})
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
         {/* Stats Card */}
         <CaregiverStatsCard
-          currentWeek={currentWeek || 1}
-          daysRemaining={daysRemaining || 280}
+          currentWeek={activeWeek}
+          daysRemaining={activeDaysRemaining}
           unreadUpdates={unreadUpdates}
         />
 
@@ -952,4 +1138,169 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10B981',
   },
+  // Caregiver Pairing Card
+  pairingCard: {
+    backgroundColor: '#FFF1F2',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
+    marginBottom: 16,
+  },
+  pairingCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pairingIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFE4E6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pairingCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9F1239',
+  },
+  pairingCardSubtitle: {
+    fontSize: 11.5,
+    color: '#881337',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  pairingInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  pairingInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#FDA4AF',
+  },
+  pairingSubmitBtn: {
+    backgroundColor: '#E11D48',
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pairingSubmitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pairingHelperText: {
+    fontSize: 11,
+    color: '#9F1239',
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  // Urgent Alert Banner
+  urgentAlertBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#F87171',
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  urgentAlertTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  urgentAlertSub: {
+    fontSize: 11,
+    color: '#B91C1C',
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  urgentAlertAction: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  urgentAlertActionText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  // Live Cloud Sync Tag
+  liveDbTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
+  },
+  liveDbTagText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  // Live Vitals Quad Strip
+  liveVitalsStrip: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  liveVitalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  liveVitalIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  liveVitalTextCol: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  liveVitalLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  liveVitalValue: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
 });
+

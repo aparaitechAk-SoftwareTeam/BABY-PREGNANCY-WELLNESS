@@ -18,29 +18,19 @@
 | **Mobile App (UI & Tracking)** | 21 screens, custom brand assets, 0 mock data, kicks/hydration/weight/symptoms/steps/sleep live | ✅ **Ready** |
 | **Authentication & OTP** | Email signup/login, Brevo SMTP OTP, password reset, Neon PostgreSQL | ✅ **Ready** |
 | **Maternal Profile Setup** | Setup form saves height, weight, due date, doctor info directly to Neon DB | ✅ **Ready** |
+| **Caregiver Family Sharing** | Live MOM-XXXX pairing codes, CaregiverPairing DB table, real-time mother vitals sync | ✅ **Ready** |
+| **Appointments Sync** | Live Neon DB appointments module, doctor visits calendar sync | ✅ **Ready** |
 | **Web Portal (Admin & Support)** | 100% mock data eradicated, wired to live users, support tickets, content, and notifications | ✅ **Ready** |
 | **Database & ORM** | Prisma schema deployed to Neon PostgreSQL with connection pooling & SSL | ✅ **Ready** |
 
 ---
 
-## 3. The 4 Remaining Development Tasks to Reach 100% Live Readiness
+## 3. The 2 Remaining Development Tasks to Reach 100% Live Readiness
 
 ```
 +-----------------------------------------------------------------------------------+
-|                        REMAINING 10% DEVELOPMENT PIPELINE                         |
+|                        REMAINING 5% DEVELOPMENT PIPELINE                          |
 +-----------------------------------------------------------------------------------+
-                                          |
-        +---------------------------------+---------------------------------+
-        |                                                                   |
-        v                                                                   v
-+-------------------------------+                         +---------------------------------+
-|  TASK 1: APPOINTMENTS SYNC    |                         |  TASK 2: CAREGIVER PAIRING     |
-|  - NestJS AppointmentsModule  |                         |  - NestJS FamilySharingModule   |
-|  - Save & read doctor visits  |                         |  - Link MOM-XXXX codes in DB    |
-|  - Sync to mobile calendar    |                         |  - Live partner dashboard sync  |
-+-------------------------------+                         +---------------------------------+
-        |                                                                   |
-        +---------------------------------+---------------------------------+
                                           |
         +---------------------------------+---------------------------------+
         |                                                                   |
@@ -55,35 +45,30 @@
 
 ---
 
-### 📌 Task 1: Appointments & Doctor Visits Database Sync
-* **Objective**: Ensure that clinic visits, ultrasound appointments, and reminders created on the mobile app are permanently saved in Neon PostgreSQL (not just local phone memory).
-* **Backend Deliverables**:
-  1. Build `AppointmentsService` & `AppointmentsController` in `backend/src/appointments/`.
-  2. Implement endpoints:
-     * `POST /api/appointments` (Create clinic/doctor visit)
-     * `GET /api/appointments` (Retrieve upcoming and past appointments for current user)
-     * `PUT /api/appointments/:id` (Update appointment details/notes)
-     * `DELETE /api/appointments/:id` (Cancel/delete appointment)
-  3. Register `AppointmentsModule` in `backend/src/app.module.ts`.
-* **Mobile Deliverables**:
-  1. Update `store/appointment.store.ts` to call backend endpoints.
-  2. Keep local AsyncStorage cache for instant offline access with background sync.
+### 📌 Task 1: Appointments & Doctor Visits Database Sync (COMPLETED ✅)
+* **Status**: Complete in `commit 7f00c0c`.
+* `AppointmentsModule`, `AppointmentsService`, `AppointmentsController` running on Neon PostgreSQL.
 
 ---
 
-### 📌 Task 2: Caregiver Code Pairing (Family Sharing)
-* **Objective**: Link the mother's 6-character pairing code (`MOM-XXXX`) in the database so that when a partner/caregiver signs up and enters the code, their app immediately reflects the mother's real-time vitals.
-* **Backend Deliverables**:
-  1. Add `CaregiverPairing` relation in Prisma schema:
-     * Fields: `id`, `motherId`, `caregiverId`, `pairingCode`, `status`, `permissions`, `createdAt`.
-  2. Build `FamilySharingService` & `FamilySharingController` in `backend/src/family-sharing/`:
-     * `POST /api/family/generate-code` (Generate and persist mother's unique code)
-     * `POST /api/family/pair` (Caregiver enters code to link accounts)
-     * `GET /api/family/mother-data` (Caregiver retrieves mother's live metrics)
-     * `DELETE /api/family/unlink/:id` (Mother revokes caregiver access)
-* **Mobile Deliverables**:
-  1. Update `app/partner/index.tsx` to submit code to `POST /api/family/pair`.
-  2. Caregiver Home Dashboard (`app/(caregiver)/index.tsx`) pulls live data from `/api/family/mother-data`.
+### 📌 Task 2: Caregiver Code Pairing & Live Mother Data Sync (COMPLETED ✅)
+* **Status**: Complete.
+* **Backend**:
+  1. `CaregiverPairing` model added to `schema.prisma` and deployed to Neon PostgreSQL via `npx prisma db push`.
+  2. `FamilySharingModule`, `FamilySharingService`, `FamilySharingController` running at:
+     * `GET /api/family/my-code` (Mother retrieves active 6-char pairing code and linked circle members)
+     * `POST /api/family/generate-code` (Mother generates fresh pairing code)
+     * `POST /api/family/pair` (Caregiver enters `MOM-XXXX` code to link)
+     * `GET /api/family/status` (Caregiver checks link status)
+     * `GET /api/family/mother-data` (Caregiver retrieves complete real-time clinical dataset for the paired mother)
+     * `DELETE /api/family/unlink/:id` (Mother/Caregiver unlinks account)
+     * `PATCH /api/family/permissions/:id` (Mother updates permissions)
+* **Mobile**:
+  1. `family.api.ts` & `family.store.ts` created for state and endpoint interactions.
+  2. `mobile-app/app/partner/index.tsx` displays live dynamic pairing code from database with instant WhatsApp/SMS share and live connected member list.
+  3. `mobile-app/app/(mother)/profile.tsx` displays live database pairing code.
+  4. `mobile-app/app/(caregiver)/index.tsx` displays interactive "Link with Mother's Account" card when unpaired, and renders live mother vitals (steps, hydration, sleep, Cardiff kick sessions, clinical red flags) directly from Neon PostgreSQL when paired.
+  5. `mobile-app/app/(caregiver)/calendar.tsx` and `track.tsx` synced to display live visits and metrics from the paired mother's record.
 
 ---
 

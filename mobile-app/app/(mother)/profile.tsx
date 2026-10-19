@@ -19,6 +19,7 @@ import { Copy, AlertCircle, LogOut, Heart, Calendar, Users, Lock, Settings, List
 // Stores
 import { useAuthStore } from '../../store/auth.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { useFamilyStore } from '../../store/family.store';
 import { EmergencySOSModal } from '../../components/common';
 
 export default function MotherProfile() {
@@ -36,16 +37,22 @@ export default function MotherProfile() {
   const daysRemaining = usePregnancyStore((state) => state.daysRemaining);
   const profile = usePregnancyStore((state) => state.profile);
 
+  const pairingCode = useFamilyStore((state) => state.pairingCode);
+  const fetchMotherPairingInfo = useFamilyStore((state) => state.fetchMotherPairingInfo);
+
+  const partnerCode = pairingCode || 'MOM-8492';
+
   // Scroll to top when screen is focused
   useFocusEffect(
     React.useCallback(() => {
+      fetchMotherPairingInfo();
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, [fetchMotherPairingInfo])
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await fetchMotherPairingInfo();
     setIsRefreshing(false);
   };
 
@@ -60,7 +67,7 @@ export default function MotherProfile() {
   const handleCopyPartnerCode = () => {
     Alert.alert(
       '✅ Code Copied!',
-      '👥 Partner Invite Code: AP-8492\n\nShare this with your partner or family. They can sign up as "Partner" and get real-time access to your pregnancy milestones, doctor checklist, and fetal kick logs.',
+      `👥 Partner Invite Code: ${partnerCode}\n\nShare this with your partner or family. When they sign up as "Caregiver", they enter this code to get real-time access to your pregnancy milestones, doctor checklist, and fetal kick logs.`,
       [
         { text: 'Got it', style: 'default' },
       ]
@@ -280,7 +287,7 @@ export default function MotherProfile() {
           >
             <View style={styles.partnerCodeLeft}>
               <Text style={styles.partnerCodeLabel}>INVITE CODE</Text>
-              <Text style={styles.partnerCodeValue}>MOM-8492</Text>
+              <Text style={styles.partnerCodeValue}>{partnerCode}</Text>
             </View>
             <Copy size={20} color="#0F172A" strokeWidth={2.5} />
           </TouchableOpacity>

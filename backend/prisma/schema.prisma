@@ -45,6 +45,8 @@ model User {
   tickets            SupportTicket[]
   messages           TicketMessage[]
   maternalNotes      MaternalNote[]
+  pairingsAsMother    CaregiverPairing[] @relation("MotherPairings")
+  pairingsAsCaregiver CaregiverPairing[] @relation("CaregiverPairings")
 }
 
 model OtpCode {
@@ -311,5 +313,24 @@ model MaternalNote {
   updatedAt DateTime @updatedAt
 
   @@index([userId, category])
+}
+
+model CaregiverPairing {
+  id           String    @id @default(uuid())
+  motherId     String
+  mother       User      @relation("MotherPairings", fields: [motherId], references: [id], onDelete: Cascade)
+  caregiverId  String?
+  caregiver    User?     @relation("CaregiverPairings", fields: [caregiverId], references: [id], onDelete: Cascade)
+  pairingCode  String    @unique
+  relationship String?   @default("Partner")
+  status       String    @default("PENDING") // PENDING, ACTIVE, REVOKED
+  permissions  Json?     // { "milestones": true, "appointments": true, "kicks": true, "emergency": true }
+  pairedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([motherId])
+  @@index([caregiverId])
+  @@index([pairingCode])
 }
 

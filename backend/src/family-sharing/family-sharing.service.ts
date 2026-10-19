@@ -44,17 +44,18 @@ export class FamilySharingService {
       throw new NotFoundException('Mother account not found');
     }
 
-    // Look for an existing pending or active pairing code for this mother
-    let pairing = await (this.prisma as any).caregiverPairing.findFirst({
+    // Look for an existing unassigned pairing code for this mother
+    let unassignedPairing = await (this.prisma as any).caregiverPairing.findFirst({
       where: {
         motherId,
-        status: { in: ['PENDING', 'ACTIVE'] },
+        caregiverId: null,
+        status: 'PENDING',
       },
       orderBy: { createdAt: 'desc' },
     });
 
     // If none exists, create a fresh unique pairing code
-    if (!pairing) {
+    if (!unassignedPairing) {
       let code = this.generateRandomCode();
       // Ensure uniqueness
       let exists = await (this.prisma as any).caregiverPairing.findUnique({
@@ -67,7 +68,7 @@ export class FamilySharingService {
         });
       }
 
-      pairing = await (this.prisma as any).caregiverPairing.create({
+      unassignedPairing = await (this.prisma as any).caregiverPairing.create({
         data: {
           motherId,
           pairingCode: code,
@@ -82,11 +83,12 @@ export class FamilySharingService {
       });
     }
 
-    // Also get all paired members for this mother
-    const allMembers = await (this.prisma as any).caregiverPairing.findMany({
+    // Get all accepted active members for this mother
+    const activeMembers = await (this.prisma as any).caregiverPairing.findMany({
       where: {
         motherId,
         status: 'ACTIVE',
+        caregiverId: { not: null },
       },
       include: {
         caregiver: {
@@ -98,18 +100,39 @@ export class FamilySharingService {
           },
         },
       },
+      orderBy: { pairedAt: 'desc' },
+    });
+
+    // Get all pending requests awaiting mother's approval
+    const pendingRequests = await (this.prisma as any).caregiverPairing.findMany({
+      where: {
+        motherId,
+        status: 'PENDING',
+        caregiverId: { not: null },
+      },
+      include: {
+        caregiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
     });
 
     return {
       success: true,
-      pairingCode: pairing.pairingCode,
-      status: pairing.status,
-      pairedMembers: allMembers.map((m: any) => ({
+      pairingCode: unassignedPairing.pairingCode,
+      status: unassignedPairing.status,
+      pairedMembers: activeMembers.map((m: any) => ({
         id: m.id,
         name: m.caregiver?.name || 'Partner',
-        email: m.caregiver?.email,
+        email: m.caregiver?.email || '',
         relationship: m.relationship || 'Partner',
-        status: m.status,
+        status: 'Active',
         permissions: m.permissions || {
           milestones: true,
           appointments: true,
@@ -119,7 +142,28 @@ export class FamilySharingService {
         pairedAt: m.pairedAt,
         connectedDate: m.pairedAt
           ? new Date(m.pairedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : 'Recent',
+          : 'Connected',
+      })),
+      pendingRequests: pendingRequests.map((r: any) => ({
+        id: r.id,
+        caregiverId: r.caregiverId,
+        name: r.caregiver?.name || 'Caregiver Applicant',
+        email: r.caregiver?.email || '',
+        relationship: r.relationship || 'Partner / Family',
+        status: 'Pending',
+        permissions: r.permissions || {
+          milestones: true,
+          appointments: true,
+          kicks: true,
+          emergency: true,
+        },
+        requestedAt: r.updatedAt,
+        connectedDate: new Date(r.updatedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
       })),
     };
   }
@@ -167,7 +211,8 @@ export class FamilySharingService {
   }
 
   /**
-   * Caregiver submits code (e.g. "MOM-8492") to link with the mother
+   * Caregiver submits code (e.g. "MOM-XXXX") to link with the mother
+   * Sets status to PENDING until the mother explicitly approves the request
    */
   async pairWithMother(caregiverId: string, pairingCode: string, relationship?: string) {
     const caregiver = await (this.prisma as any).user.findUnique({
@@ -206,35 +251,12 @@ export class FamilySharingService {
       throw new BadRequestException('You cannot pair with yourself as caregiver.');
     }
 
-    // Check if this caregiver is already linked to this mother
-    const alreadyLinked = await (this.prisma as any).caregiverPairing.findFirst({
+    // Check if this caregiver is already linked (ACTIVE) or already requested (PENDING)
+    const existingPairing = await (this.prisma as any).caregiverPairing.findFirst({
       where: {
         motherId: pairing.motherId,
         caregiverId,
-        status: 'ACTIVE',
-      },
-    });
-
-    if (alreadyLinked) {
-      return {
-        success: true,
-        message: 'You are already linked with this mother.',
-        pairing: alreadyLinked,
-        mother: {
-          name: pairing.mother.name,
-          email: pairing.mother.email,
-        },
-      };
-    }
-
-    // Update the pairing record to ACTIVE with caregiver's ID
-    const updated = await (this.prisma as any).caregiverPairing.update({
-      where: { id: pairing.id },
-      data: {
-        caregiverId,
-        status: 'ACTIVE',
-        relationship: relationship || pairing.relationship || 'Partner',
-        pairedAt: new Date(),
+        status: { in: ['ACTIVE', 'PENDING'] },
       },
       include: {
         mother: {
@@ -247,9 +269,70 @@ export class FamilySharingService {
       },
     });
 
+    if (existingPairing) {
+      if (existingPairing.status === 'ACTIVE') {
+        return {
+          success: true,
+          status: 'ACTIVE',
+          message: `You are already connected with ${existingPairing.mother.name}!`,
+          pairing: existingPairing,
+          mother: {
+            name: existingPairing.mother.name,
+            email: existingPairing.mother.email,
+          },
+        };
+      }
+      return {
+        success: true,
+        status: 'PENDING',
+        message: `Your pairing request is pending approval by ${existingPairing.mother.name}. Please ask her to tap 'Accept' in her app.`,
+        pairing: existingPairing,
+        mother: {
+          name: existingPairing.mother.name,
+          email: existingPairing.mother.email,
+        },
+      };
+    }
+
+    // Link caregiver to this pairing record in PENDING status
+    const updated = await (this.prisma as any).caregiverPairing.update({
+      where: { id: pairing.id },
+      data: {
+        caregiverId,
+        status: 'PENDING',
+        relationship: relationship || pairing.relationship || 'Partner / Caregiver',
+      },
+      include: {
+        mother: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Record security audit log
+    try {
+      await (this.prisma as any).auditLog.create({
+        data: {
+          action: 'CAREGIVER_PAIR_REQUEST',
+          entity: 'CaregiverPairing',
+          entityId: updated.id,
+          userId: caregiver.id,
+          userName: caregiver.name,
+          details: `${caregiver.name} requested caregiver pairing with ${pairing.mother.name}`,
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e);
+    }
+
     return {
       success: true,
-      message: `Successfully linked with ${pairing.mother.name}!`,
+      status: 'PENDING',
+      message: `Pairing request submitted! ${pairing.mother.name} must approve your request before you can view her dashboard.`,
       pairing: updated,
       mother: {
         name: pairing.mother.name,
@@ -265,7 +348,7 @@ export class FamilySharingService {
     const pairing = await (this.prisma as any).caregiverPairing.findFirst({
       where: {
         caregiverId,
-        status: 'ACTIVE',
+        status: { in: ['ACTIVE', 'PENDING'] },
       },
       include: {
         mother: {
@@ -283,13 +366,15 @@ export class FamilySharingService {
     if (!pairing) {
       return {
         isPaired: false,
+        status: 'NONE',
         pairing: null,
         mother: null,
       };
     }
 
     return {
-      isPaired: true,
+      isPaired: pairing.status === 'ACTIVE',
+      status: pairing.status, // 'ACTIVE' or 'PENDING'
       pairing: {
         id: pairing.id,
         pairingCode: pairing.pairingCode,
@@ -561,6 +646,10 @@ export class FamilySharingService {
   async unlinkPairing(userId: string, pairingId: string) {
     const pairing = await (this.prisma as any).caregiverPairing.findUnique({
       where: { id: pairingId },
+      include: {
+        caregiver: { select: { id: true, name: true } },
+        mother: { select: { id: true, name: true } },
+      },
     });
 
     if (!pairing) {
@@ -579,9 +668,154 @@ export class FamilySharingService {
       },
     });
 
+    try {
+      await (this.prisma as any).auditLog.create({
+        data: {
+          action: 'CAREGIVER_REVOKED',
+          entity: 'CaregiverPairing',
+          entityId: pairingId,
+          userId,
+          userName: pairing.motherId === userId ? pairing.mother?.name || 'Mother' : pairing.caregiver?.name || 'Caregiver',
+          details: `Caregiver access revoked for ${pairing.caregiver?.name || 'Caregiver'}`,
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e);
+    }
+
     return {
       success: true,
       message: 'Pairing successfully unlinked',
+    };
+  }
+
+  /**
+   * Mother explicitly approves a pending caregiver request
+   */
+  async acceptPairingRequest(motherId: string, pairingId: string) {
+    const pairing = await (this.prisma as any).caregiverPairing.findUnique({
+      where: { id: pairingId },
+      include: {
+        caregiver: {
+          select: { id: true, name: true, email: true },
+        },
+        mother: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!pairing || pairing.motherId !== motherId) {
+      throw new ForbiddenException('Unauthorized to approve this pairing request');
+    }
+
+    const updated = await (this.prisma as any).caregiverPairing.update({
+      where: { id: pairingId },
+      data: {
+        status: 'ACTIVE',
+        pairedAt: new Date(),
+      },
+    });
+
+    // Record audit log
+    try {
+      await (this.prisma as any).auditLog.create({
+        data: {
+          action: 'CAREGIVER_ACCEPTED',
+          entity: 'CaregiverPairing',
+          entityId: pairing.id,
+          userId: motherId,
+          userName: pairing.mother?.name || 'Mother',
+          details: `Mother approved caregiver access for ${pairing.caregiver?.name || 'Caregiver'}`,
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e);
+    }
+
+    return {
+      success: true,
+      message: `Successfully accepted ${pairing.caregiver?.name || 'Caregiver'}! They can now view authorized pregnancy vitals.`,
+      pairing: updated,
+    };
+  }
+
+  /**
+   * Mother rejects a pending caregiver request
+   */
+  async rejectPairingRequest(motherId: string, pairingId: string) {
+    const pairing = await (this.prisma as any).caregiverPairing.findUnique({
+      where: { id: pairingId },
+      include: {
+        caregiver: {
+          select: { id: true, name: true, email: true },
+        },
+        mother: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!pairing || pairing.motherId !== motherId) {
+      throw new ForbiddenException('Unauthorized to reject this pairing request');
+    }
+
+    const updated = await (this.prisma as any).caregiverPairing.update({
+      where: { id: pairingId },
+      data: {
+        status: 'REVOKED',
+        caregiverId: null,
+      },
+    });
+
+    // Record audit log
+    try {
+      await (this.prisma as any).auditLog.create({
+        data: {
+          action: 'CAREGIVER_REJECTED',
+          entity: 'CaregiverPairing',
+          entityId: pairing.id,
+          userId: motherId,
+          userName: pairing.mother?.name || 'Mother',
+          details: `Mother rejected caregiver access request for ${pairing.caregiver?.name || 'Caregiver'}`,
+        },
+      });
+    } catch (e) {
+      console.warn('Audit log write error:', e);
+    }
+
+    return {
+      success: true,
+      message: `Pairing request rejected.`,
+      pairing: updated,
+    };
+  }
+
+  /**
+   * Retrieve recent security audit logs for caregiver access
+   */
+  async getAuditLogs(userId: string) {
+    const logs = await (this.prisma as any).auditLog.findMany({
+      where: {
+        entity: 'CaregiverPairing',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    return {
+      success: true,
+      data: logs.map((l: any) => ({
+        id: l.id,
+        action: l.details || l.action,
+        user: l.userName || 'User',
+        timeStr: new Date(l.createdAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      })),
     };
   }
 

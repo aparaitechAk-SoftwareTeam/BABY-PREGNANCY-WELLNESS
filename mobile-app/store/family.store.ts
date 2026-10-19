@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import { familyApi, PairedMember, MotherLiveData } from '../services/api/family.api';
+import { familyApi, PairedMember, PendingRequest, MotherLiveData } from '../services/api/family.api';
 
 interface FamilyStoreState {
   // Mother's state
   pairingCode: string;
   pairedMembers: PairedMember[];
+  pendingRequests: PendingRequest[];
   isLoadingMotherCode: boolean;
 
   // Caregiver's state
   isCaregiverPaired: boolean;
+  caregiverStatus: 'ACTIVE' | 'PENDING' | 'NONE';
   pairedMother: any | null;
   motherLiveData: MotherLiveData | null;
   isLoadingMotherData: boolean;
@@ -17,20 +19,24 @@ interface FamilyStoreState {
   // Actions for Mother
   fetchMotherPairingInfo: () => Promise<void>;
   generateNewCode: (relationship?: string) => Promise<string>;
+  acceptCaregiverRequest: (pairingId: string) => Promise<{ success: boolean; message: string }>;
+  rejectCaregiverRequest: (pairingId: string) => Promise<{ success: boolean; message: string }>;
   unlinkCaregiver: (pairingId: string) => Promise<void>;
 
   // Actions for Caregiver
   fetchCaregiverStatus: () => Promise<boolean>;
-  pairWithMother: (code: string, relationship?: string) => Promise<{ success: boolean; message: string }>;
+  pairWithMother: (code: string, relationship?: string) => Promise<{ success: boolean; status?: string; message: string }>;
   fetchMotherLiveData: () => Promise<void>;
 }
 
 export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
   pairingCode: '',
   pairedMembers: [],
+  pendingRequests: [],
   isLoadingMotherCode: false,
 
   isCaregiverPaired: false,
+  caregiverStatus: 'NONE',
   pairedMother: null,
   motherLiveData: null,
   isLoadingMotherData: false,
@@ -44,6 +50,7 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
         set({
           pairingCode: res.pairingCode || '',
           pairedMembers: res.pairedMembers || [],
+          pendingRequests: res.pendingRequests || [],
         });
       }
     } catch {
@@ -67,11 +74,34 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
     }
   },
 
+  acceptCaregiverRequest: async (pairingId: string) => {
+    try {
+      const res = await familyApi.acceptRequest(pairingId);
+      await get().fetchMotherPairingInfo();
+      return { success: true, message: res.message || 'Request approved successfully!' };
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to approve request';
+      return { success: false, message: typeof msg === 'string' ? msg : 'Failed to approve request' };
+    }
+  },
+
+  rejectCaregiverRequest: async (pairingId: string) => {
+    try {
+      const res = await familyApi.rejectRequest(pairingId);
+      await get().fetchMotherPairingInfo();
+      return { success: true, message: res.message || 'Request rejected.' };
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to reject request';
+      return { success: false, message: typeof msg === 'string' ? msg : 'Failed to reject request' };
+    }
+  },
+
   unlinkCaregiver: async (pairingId: string) => {
     try {
       await familyApi.unlinkPairing(pairingId);
       set((state) => ({
         pairedMembers: state.pairedMembers.filter((m) => m.id !== pairingId),
+        pendingRequests: state.pendingRequests.filter((r) => r.id !== pairingId),
       }));
     } catch (err) {
       throw err;
@@ -81,17 +111,27 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
   fetchCaregiverStatus: async () => {
     try {
       const res = await familyApi.getCaregiverStatus();
-      if (res && res.isPaired) {
+      if (res && res.status === 'ACTIVE') {
         set({
           isCaregiverPaired: true,
+          caregiverStatus: 'ACTIVE',
           pairedMother: res.mother,
         });
         // Auto trigger mother live data load
         get().fetchMotherLiveData();
         return true;
+      } else if (res && res.status === 'PENDING') {
+        set({
+          isCaregiverPaired: false,
+          caregiverStatus: 'PENDING',
+          pairedMother: res.mother,
+          motherLiveData: null,
+        });
+        return false;
       } else {
         set({
           isCaregiverPaired: false,
+          caregiverStatus: 'NONE',
           pairedMother: null,
           motherLiveData: null,
         });
@@ -107,13 +147,27 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
     try {
       const res = await familyApi.pairWithMother(code, relationship);
       if (res && res.success) {
-        set({
-          isCaregiverPaired: true,
-          pairedMother: res.mother,
-        });
-        // Immediately fetch live mother data from Neon DB
-        await get().fetchMotherLiveData();
-        return { success: true, message: res.message || 'Linked successfully!' };
+        if (res.status === 'ACTIVE') {
+          set({
+            isCaregiverPaired: true,
+            caregiverStatus: 'ACTIVE',
+            pairedMother: res.mother,
+          });
+          // Immediately fetch live mother data from Neon DB
+          await get().fetchMotherLiveData();
+        } else {
+          set({
+            isCaregiverPaired: false,
+            caregiverStatus: 'PENDING',
+            pairedMother: res.mother,
+            motherLiveData: null,
+          });
+        }
+        return {
+          success: true,
+          status: res.status,
+          message: res.message || 'Pairing request submitted! Awaiting mother approval.',
+        };
       }
       return { success: false, message: 'Could not link with mother.' };
     } catch (err: any) {
@@ -135,6 +189,7 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
         set({
           motherLiveData: data,
           isCaregiverPaired: true,
+          caregiverStatus: 'ACTIVE',
           pairedMother: data.mother,
         });
       }
@@ -150,3 +205,4 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
     }
   },
 }));
+

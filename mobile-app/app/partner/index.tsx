@@ -20,6 +20,7 @@ import {
   Share2,
   ShieldCheck,
   UserCheck,
+  UserX,
   Clock,
   Settings2,
   UserPlus,
@@ -28,6 +29,9 @@ import {
   ChevronRight,
   CheckCircle2,
   ListTodo,
+  Check,
+  X,
+  AlertCircle,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
@@ -55,9 +59,12 @@ export default function PartnerSyncScreen() {
 
   const pairingCode = useFamilyStore((state) => state.pairingCode);
   const pairedMembers = useFamilyStore((state) => state.pairedMembers);
+  const pendingRequests = useFamilyStore((state) => state.pendingRequests);
   const isLoadingMotherCode = useFamilyStore((state) => state.isLoadingMotherCode);
   const fetchMotherPairingInfo = useFamilyStore((state) => state.fetchMotherPairingInfo);
   const generateNewCode = useFamilyStore((state) => state.generateNewCode);
+  const acceptCaregiverRequest = useFamilyStore((state) => state.acceptCaregiverRequest);
+  const rejectCaregiverRequest = useFamilyStore((state) => state.rejectCaregiverRequest);
   const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
 
   const inviteCode = pairingCode || (isLoadingMotherCode ? 'Loading...' : 'Generating code...');
@@ -130,6 +137,49 @@ export default function PartnerSyncScreen() {
       title: 'AparaiTech Caregiver Invite',
       message,
     });
+  };
+
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+
+  const handleAcceptRequest = async (requestId: string, name: string) => {
+    setProcessingRequestId(requestId);
+    try {
+      const res = await acceptCaregiverRequest(requestId);
+      if (res.success) {
+        Alert.alert('Request Approved! 🎉', `${name} can now view your authorized pregnancy updates.`);
+      } else {
+        Alert.alert('Action Failed', res.message);
+      }
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = (requestId: string, name: string) => {
+    Alert.alert(
+      `Decline Caregiver Request?`,
+      `Are you sure you want to decline ${name}'s request to link with your pregnancy dashboard?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            setProcessingRequestId(requestId);
+            try {
+              const res = await rejectCaregiverRequest(requestId);
+              if (res.success) {
+                Alert.alert('Request Declined', `${name}'s request was declined.`);
+              } else {
+                Alert.alert('Action Failed', res.message);
+              }
+            } finally {
+              setProcessingRequestId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -255,6 +305,61 @@ export default function PartnerSyncScreen() {
             <ChevronRight size={18} color="#94A3B8" />
           </TouchableOpacity>
         </View>
+
+        {/* Pending Approval Requests Section (Mother Privacy Gatekeeper) */}
+        {pendingRequests && pendingRequests.length > 0 && (
+          <View style={styles.pendingSection}>
+            <View style={styles.pendingSectionHeader}>
+              <View style={styles.pendingBadgeDot} />
+              <Text style={styles.pendingSectionTitle}>
+                Access Requests Awaiting Approval ({pendingRequests.length})
+              </Text>
+            </View>
+            <Text style={styles.pendingSectionSub}>
+              These users entered your code. Maternal vitals remain hidden until you explicitly tap "Accept".
+            </Text>
+
+            {pendingRequests.map((req) => (
+              <View key={req.id} style={styles.pendingCard}>
+                <View style={styles.pendingTopRow}>
+                  <View style={styles.pendingAvatar}>
+                    <Text style={styles.pendingAvatarText}>{req.name ? req.name.charAt(0) : 'C'}</Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.pendingName}>{req.name}</Text>
+                    <Text style={styles.pendingMeta}>{req.relationship} • {req.email || req.connectedDate}</Text>
+                  </View>
+                  <View style={styles.pendingPill}>
+                    <Clock size={11} color="#D97706" />
+                    <Text style={styles.pendingPillText}>Pending</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pendingActionsRow}>
+                  <TouchableOpacity
+                    style={styles.rejectBtn}
+                    onPress={() => handleRejectRequest(req.id, req.name)}
+                    disabled={processingRequestId === req.id}
+                    activeOpacity={0.8}
+                  >
+                    <X size={15} color="#DC2626" />
+                    <Text style={styles.rejectBtnText}>Decline</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.acceptBtn}
+                    onPress={() => handleAcceptRequest(req.id, req.name)}
+                    disabled={processingRequestId === req.id}
+                    activeOpacity={0.8}
+                  >
+                    <Check size={15} color="#FFFFFF" />
+                    <Text style={styles.acceptBtnText}>Accept Access</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Connected Circle Members List */}
         <View style={styles.sectionHeaderRow}>
@@ -712,4 +817,137 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  pendingSection: {
+    marginBottom: 20,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+  },
+  pendingSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  pendingBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D97706',
+  },
+  pendingSectionTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  pendingSectionSub: {
+    fontSize: 11.5,
+    color: '#B45309',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  pendingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  pendingTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  pendingAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  pendingAvatarText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  pendingName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  pendingMeta: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  pendingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  pendingPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  pendingActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  rejectBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  acceptBtn: {
+    flex: 1.4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#059669',
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  acceptBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });
+

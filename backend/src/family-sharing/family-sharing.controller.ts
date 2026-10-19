@@ -103,6 +103,42 @@ export class FamilySharingController {
   }
 
   /**
+   * MOTHER: Accept a pending caregiver link request
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('requests/:id/accept')
+  async acceptRequest(
+    @CurrentUser() user: any,
+    @Param('id') pairingId: string,
+  ) {
+    const motherId = user?.sub || user?.id;
+    return this.familySharingService.acceptPairingRequest(motherId, pairingId);
+  }
+
+  /**
+   * MOTHER: Reject a pending caregiver link request
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('requests/:id/reject')
+  async rejectRequest(
+    @CurrentUser() user: any,
+    @Param('id') pairingId: string,
+  ) {
+    const motherId = user?.sub || user?.id;
+    return this.familySharingService.rejectPairingRequest(motherId, pairingId);
+  }
+
+  /**
+   * MOTHER / CAREGIVER: Retrieve access & security audit logs
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('audit-logs')
+  async getAuditLogs(@CurrentUser() user: any) {
+    const userId = user?.sub || user?.id;
+    return this.familySharingService.getAuditLogs(userId);
+  }
+
+  /**
    * MOTHER: Update permissions granted to caregiver
    */
   @UseGuards(JwtAuthGuard)

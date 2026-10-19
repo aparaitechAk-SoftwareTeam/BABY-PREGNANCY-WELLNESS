@@ -23,17 +23,13 @@ import {
   Clock,
   History,
   Trash2,
+  Check,
+  X,
+  RefreshCw,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
-
-interface CaregiverMember {
-  id: string;
-  name: string;
-  relation: string;
-  emailOrPhone: string;
-  status: 'Active' | 'Pending';
-  lastActive: string;
-}
+import { useFamilyStore } from '../../store/family.store';
+import { familyApi } from '../../services/api/family.api';
 
 interface AccessLog {
   id: string;
@@ -46,68 +42,110 @@ export default function ManageAccessScreen() {
   const router = useRouter();
   const profile = usePregnancyStore((state) => state.profile);
 
-  const initialMembers: CaregiverMember[] = profile?.emergencyContactName
-    ? [
-        {
-          id: 'cg-emergency',
-          name: profile.emergencyContactName,
-          relation: profile.emergencyContactRelation || 'Emergency Contact / Partner',
-          emailOrPhone: profile.emergencyContactPhone || 'Configured by Mother',
-          status: 'Active',
-          lastActive: 'Connected in Profile Setup',
-        },
-      ]
-    : [];
+  const pairedMembers = useFamilyStore((state) => state.pairedMembers);
+  const pendingRequests = useFamilyStore((state) => state.pendingRequests);
+  const fetchMotherPairingInfo = useFamilyStore((state) => state.fetchMotherPairingInfo);
+  const acceptCaregiverRequest = useFamilyStore((state) => state.acceptCaregiverRequest);
+  const rejectCaregiverRequest = useFamilyStore((state) => state.rejectCaregiverRequest);
+  const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
+  const generateNewCode = useFamilyStore((state) => state.generateNewCode);
 
-  const [members, setMembers] = useState<CaregiverMember[]>(initialMembers);
   const [auditLogs, setAuditLogs] = useState<AccessLog[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteName, setInviteName] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Partner / Husband');
-  const [inviteContact, setInviteContact] = useState('');
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handleRevoke = (member: CaregiverMember) => {
+  const loadData = React.useCallback(async () => {
+    await fetchMotherPairingInfo();
+    try {
+      const logsRes = await familyApi.getAuditLogs();
+      if (logsRes && logsRes.success && Array.isArray(logsRes.data)) {
+        setAuditLogs(logsRes.data);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [fetchMotherPairingInfo]);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAccept = async (id: string, name: string) => {
+    setIsProcessing(id);
+    try {
+      const res = await acceptCaregiverRequest(id);
+      if (res.success) {
+        Alert.alert('Request Approved! 🎉', `${name} now has access to your authorized pregnancy vitals.`);
+        await loadData();
+      } else {
+        Alert.alert('Action Failed', res.message);
+      }
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleReject = (id: string, name: string) => {
     Alert.alert(
-      `Revoke Access for ${member.name}?`,
-      `They will immediately lose access to your pregnancy timeline, appointments, and movement logs. You can re-invite them at any time.`,
+      `Decline Caregiver Request?`,
+      `Are you sure you want to decline access for ${name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Revoke Access',
+          text: 'Decline',
           style: 'destructive',
-          onPress: () => {
-            setMembers((prev) => prev.filter((m) => m.id !== member.id));
-            Alert.alert('Access Revoked', `${member.name}'s caregiver access has been removed.`);
+          onPress: async () => {
+            setIsProcessing(id);
+            try {
+              const res = await rejectCaregiverRequest(id);
+              if (res.success) {
+                Alert.alert('Request Declined', `${name}'s request was declined.`);
+                await loadData();
+              } else {
+                Alert.alert('Action Failed', res.message);
+              }
+            } finally {
+              setIsProcessing(null);
+            }
           },
         },
       ]
     );
   };
 
-  const handleResendInvite = (member: CaregiverMember) => {
-    Alert.alert('Invite Resent', `A new invitation link has been dispatched to ${member.emailOrPhone}.`);
+  const handleRevoke = (id: string, name: string) => {
+    Alert.alert(
+      `Revoke Access for ${name}?`,
+      `They will immediately lose access to your pregnancy timeline, appointments, and vitals.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke Access',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await unlinkCaregiver(id);
+              Alert.alert('Access Revoked', `${name}'s access has been removed.`);
+              await loadData();
+            } catch {
+              Alert.alert('Error', 'Could not revoke access. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const handleSendInvite = () => {
-    if (!inviteName.trim() || !inviteContact.trim()) {
-      Alert.alert('Missing Fields', 'Please enter both the caregiver name and phone/email.');
-      return;
+  const handleGenerateAdditionalCode = async () => {
+    try {
+      const code = await generateNewCode(inviteRelation);
+      Alert.alert('New Code Generated! 🔑', `New invite code for ${inviteRelation}: ${code}\nShare this with them to request access.`);
+      setShowInviteModal(false);
+      await loadData();
+    } catch {
+      Alert.alert('Error', 'Could not generate invite code.');
     }
-
-    const newMember: CaregiverMember = {
-      id: 'cg_' + Date.now(),
-      name: inviteName.trim(),
-      relation: inviteRelation,
-      emailOrPhone: inviteContact.trim(),
-      status: 'Pending',
-      lastActive: 'Just invited',
-    };
-
-    setMembers((prev) => [...prev, newMember]);
-    setInviteName('');
-    setInviteContact('');
-    setShowInviteModal(false);
-    Alert.alert('Invitation Dispatched! ✉️', `Invitation sent to ${newMember.name}. They will appear here once registered.`);
   };
 
   return (
@@ -149,39 +187,19 @@ export default function ManageAccessScreen() {
         {/* Inline Invite Form */}
         {showInviteModal && (
           <View style={styles.inviteFormCard}>
-            <Text style={styles.formTitle}>Invite a New Caregiver</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Enter caregiver full name"
-                placeholderTextColor="#94A3B8"
-                value={inviteName}
-                onChangeText={setInviteName}
-              />
-            </View>
+            <Text style={styles.formTitle}>Invite an Additional Caregiver</Text>
+            <Text style={styles.inviteHelpText}>
+              Generate a unique pairing code specifically for another family member or doula.
+            </Text>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Relationship</Text>
               <TextInput
                 style={styles.inputField}
-                placeholder="e.g. Partner / Mother / Sister / Doula"
+                placeholder="e.g. Doula / Grandmother / Sister"
                 placeholderTextColor="#94A3B8"
                 value={inviteRelation}
                 onChangeText={setInviteRelation}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Mobile Number or Email</Text>
-              <TextInput
-                style={styles.inputField}
-                placeholder="+91 98765 43210 or email"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                value={inviteContact}
-                onChangeText={setInviteContact}
               />
             </View>
 
@@ -195,73 +213,93 @@ export default function ManageAccessScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.submitBtn}
-                onPress={handleSendInvite}
+                onPress={handleGenerateAdditionalCode}
                 activeOpacity={0.8}
               >
                 <Send size={14} color="#FFFFFF" />
-                <Text style={styles.submitBtnText}>Send Invitation</Text>
+                <Text style={styles.submitBtnText}>Generate Code</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* Members List */}
-        <Text style={styles.sectionHeading}>Current Caregivers ({members.length})</Text>
+        {/* Pending Requests Section (Mother Security Gatekeeper) */}
+        {pendingRequests.length > 0 && (
+          <View style={{ marginBottom: 18 }}>
+            <Text style={[styles.sectionHeading, { color: '#B45309' }]}>
+              Pending Link Requests ({pendingRequests.length})
+            </Text>
+            {pendingRequests.map((req) => (
+              <View key={req.id} style={[styles.memberCard, { borderColor: '#FDE68A', backgroundColor: '#FFFBEB' }]}>
+                <View style={styles.memberTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.memberName}>{req.name}</Text>
+                    <Text style={styles.memberRelation}>{req.relationship} • {req.email || req.connectedDate}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, styles.statusPending]}>
+                    <Text style={[styles.statusBadgeText, styles.statusTextPending]}>Awaiting Approval</Text>
+                  </View>
+                </View>
 
-        {members.length === 0 ? (
+                <View style={styles.memberActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.revokeBtn, { borderColor: '#FECACA', backgroundColor: '#FEF2F2' }]}
+                    onPress={() => handleReject(req.id, req.name)}
+                    disabled={isProcessing === req.id}
+                    activeOpacity={0.8}
+                  >
+                    <X size={13} color="#DC2626" />
+                    <Text style={styles.revokeBtnText}>Decline</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.resendBtn, { backgroundColor: '#059669', borderColor: '#059669' }]}
+                    onPress={() => handleAccept(req.id, req.name)}
+                    disabled={isProcessing === req.id}
+                    activeOpacity={0.8}
+                  >
+                    <Check size={13} color="#FFFFFF" />
+                    <Text style={[styles.resendBtnText, { color: '#FFFFFF' }]}>Accept Access</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Current Active Caregivers */}
+        <Text style={styles.sectionHeading}>Active Caregivers ({pairedMembers.length})</Text>
+
+        {pairedMembers.length === 0 ? (
           <View style={styles.emptyCircleCard}>
             <Users size={28} color="#94A3B8" />
-            <Text style={styles.emptyCircleTitle}>No Caregivers Linked</Text>
+            <Text style={styles.emptyCircleTitle}>No Active Caregivers Linked</Text>
             <Text style={styles.emptyCircleSub}>
-              Tap "Invite" above to share access with your partner or trusted family member.
+              Share your invite code with your partner or trusted family member. Once they enter it, you will see their request here to approve.
             </Text>
           </View>
         ) : (
-          members.map((member) => (
+          pairedMembers.map((member) => (
             <View key={member.id} style={styles.memberCard}>
               <View style={styles.memberTop}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.memberName}>{member.name}</Text>
-                  <Text style={styles.memberRelation}>{member.relation} • {member.emailOrPhone}</Text>
+                  <Text style={styles.memberRelation}>{member.relationship} • {member.email || member.connectedDate}</Text>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    member.status === 'Active' ? styles.statusActive : styles.statusPending,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      member.status === 'Active' ? styles.statusTextActive : styles.statusTextPending,
-                    ]}
-                  >
-                    {member.status}
-                  </Text>
+                <View style={[styles.statusBadge, styles.statusActive]}>
+                  <Text style={[styles.statusBadgeText, styles.statusTextActive]}>Active</Text>
                 </View>
               </View>
 
               <View style={styles.memberMetaRow}>
                 <Clock size={12} color="#64748B" />
-                <Text style={styles.memberLastActive}>{member.lastActive}</Text>
+                <Text style={styles.memberLastActive}>Connected {member.connectedDate}</Text>
               </View>
 
-              {/* Action buttons */}
               <View style={styles.memberActionsRow}>
-                {member.status === 'Pending' && (
-                  <TouchableOpacity
-                    style={styles.resendBtn}
-                    onPress={() => handleResendInvite(member)}
-                    activeOpacity={0.8}
-                  >
-                    <Send size={13} color="#0284C7" />
-                    <Text style={styles.resendBtnText}>Resend Invite</Text>
-                  </TouchableOpacity>
-                )}
-
                 <TouchableOpacity
                   style={styles.revokeBtn}
-                  onPress={() => handleRevoke(member)}
+                  onPress={() => handleRevoke(member.id, member.name)}
                   activeOpacity={0.8}
                 >
                   <Trash2 size={13} color="#DC2626" />
@@ -396,7 +434,13 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '700',
     color: '#0F172A',
+    marginBottom: 4,
+  },
+  inviteHelpText: {
+    fontSize: 11.5,
+    color: '#64748B',
     marginBottom: 12,
+    lineHeight: 16,
   },
   inputGroup: {
     marginBottom: 12,

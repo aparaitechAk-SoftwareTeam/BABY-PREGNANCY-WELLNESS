@@ -33,6 +33,8 @@ import {
   Droplets,
   Moon,
   Activity,
+  Clock,
+  RefreshCw,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
@@ -65,6 +67,8 @@ export default function CaregiverHome() {
 
   // Family Store (Live Mother Pairing)
   const isCaregiverPaired = useFamilyStore((state) => state.isCaregiverPaired);
+  const caregiverStatus = useFamilyStore((state) => state.caregiverStatus);
+  const pairedMother = useFamilyStore((state) => state.pairedMother);
   const motherLiveData = useFamilyStore((state) => state.motherLiveData);
   const isLoadingMotherData = useFamilyStore((state) => state.isLoadingMotherData);
   const isPairingSubmitting = useFamilyStore((state) => state.isPairingSubmitting);
@@ -76,6 +80,7 @@ export default function CaregiverHome() {
   const activeMotherName =
     motherLiveData?.mother?.nickname ||
     motherLiveData?.mother?.name ||
+    pairedMother?.name ||
     (pregnancyProfile?.nickname ? `${pregnancyProfile.nickname}'s Mother` : user?.partnerName || 'Mother');
 
   const activeWeek = motherLiveData?.mother?.currentWeek || currentWeek || 20;
@@ -135,7 +140,11 @@ export default function CaregiverHome() {
     }
     const res = await pairWithMother(pairingInput.trim().toUpperCase());
     if (res.success) {
-      Alert.alert('Connected! 🎉', res.message);
+      if (res.status === 'ACTIVE') {
+        Alert.alert('Connected! 🎉', res.message);
+      } else {
+        Alert.alert('Request Sent! ⏳', res.message);
+      }
       setPairingInput('');
     } else {
       Alert.alert('Connection Failed', res.message);
@@ -248,8 +257,31 @@ export default function CaregiverHome() {
           </TouchableOpacity>
         </View>
 
-        {/* Pairing Code Card (Displayed when Caregiver is NOT paired yet) */}
-        {!isCaregiverPaired && (
+        {/* Pairing Code Card / Pending Approval Card */}
+        {caregiverStatus === 'PENDING' ? (
+          <View style={styles.pendingCaregiverCard}>
+            <View style={styles.pendingHeaderRow}>
+              <View style={styles.pendingIconBadge}>
+                <Clock size={20} color="#D97706" strokeWidth={2.5} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.pendingCardTitle}>Link Request Awaiting Approval</Text>
+                <Text style={styles.pendingCardSubtitle}>
+                  Your pairing request was submitted to {activeMotherName}. For maternal privacy and clinical security, she must approve your connection in her app before her vitals, appointments, and kick logs become visible.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.checkStatusBtn}
+              onPress={refreshCaregiverData}
+              activeOpacity={0.8}
+            >
+              <RefreshCw size={14} color="#D97706" />
+              <Text style={styles.checkStatusBtnText}>Check Approval Status</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !isCaregiverPaired ? (
           <View style={styles.pairingCard}>
             <View style={styles.pairingCardHeader}>
               <View style={styles.pairingIconBadge}>
@@ -282,15 +314,15 @@ export default function CaregiverHome() {
                 {isPairingSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.pairingSubmitBtnText}>Link</Text>
+                  <Text style={styles.pairingSubmitBtnText}>Send Request</Text>
                 )}
               </TouchableOpacity>
             </View>
             <Text style={styles.pairingHelperText}>
-              The mother can find her code in Profile → Family & Partner Circle.
+              The mother will receive your request and can accept or decline from her Family & Partner Circle.
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* Clinical Alert Banner (If mother reported urgent symptoms) */}
         {motherLiveData?.clinicalAlerts?.hasUrgentSymptom && (
@@ -314,7 +346,7 @@ export default function CaregiverHome() {
         {/* Status Banner */}
         <CaregiverStatusBanner
           motherName={activeMotherName}
-          connectionStatus={isCaregiverPaired ? 'connected' : 'pending'}
+          connectionStatus={isCaregiverPaired ? 'connected' : caregiverStatus === 'PENDING' ? 'pending' : 'disconnected'}
         />
 
         {/* Top Horizontal Appointment Announcement (Today / Upcoming) */}
@@ -1137,6 +1169,55 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#10B981',
+  },
+  // Caregiver Pending Approval Card
+  pendingCaregiverCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    marginBottom: 16,
+  },
+  pendingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  pendingIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingCardTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  pendingCardSubtitle: {
+    fontSize: 11.5,
+    color: '#B45309',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  checkStatusBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  checkStatusBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#B45309',
   },
   // Caregiver Pairing Card
   pairingCard: {

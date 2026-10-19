@@ -123,15 +123,33 @@ export interface MotherLiveData {
   }>;
 }
 
+export interface PendingRequest {
+  id: string;
+  caregiverId: string;
+  name: string;
+  email: string;
+  relationship: string;
+  status: 'Pending';
+  permissions: {
+    milestones: boolean;
+    appointments: boolean;
+    kicks: boolean;
+    emergency: boolean;
+  };
+  requestedAt: string;
+  connectedDate: string;
+}
+
 export const familyApi = {
   /**
-   * Get mother's active code & list of paired members
+   * Get mother's active code, paired members, and pending link requests
    */
   getMyCode: async (): Promise<{
     success: boolean;
     pairingCode: string;
     status: string;
     pairedMembers: PairedMember[];
+    pendingRequests: PendingRequest[];
   }> => {
     const res = await apiClient.get('/family/my-code');
     return res.data;
@@ -150,13 +168,41 @@ export const familyApi = {
   },
 
   /**
-   * Caregiver submits code to pair
+   * Mother explicitly approves a pending caregiver request
+   */
+  acceptRequest: async (pairingId: string): Promise<{ success: boolean; message: string; pairing: any }> => {
+    const res = await apiClient.post(`/family/requests/${pairingId}/accept`);
+    return res.data;
+  },
+
+  /**
+   * Mother rejects a pending caregiver request
+   */
+  rejectRequest: async (pairingId: string): Promise<{ success: boolean; message: string; pairing: any }> => {
+    const res = await apiClient.post(`/family/requests/${pairingId}/reject`);
+    return res.data;
+  },
+
+  /**
+   * Retrieve caregiver security audit logs
+   */
+  getAuditLogs: async (): Promise<{
+    success: boolean;
+    data: Array<{ id: string; action: string; user: string; timeStr: string }>;
+  }> => {
+    const res = await apiClient.get('/family/audit-logs');
+    return res.data;
+  },
+
+  /**
+   * Caregiver submits code to request pairing
    */
   pairWithMother: async (
     pairingCode: string,
     relationship?: string,
   ): Promise<{
     success: boolean;
+    status: string;
     message: string;
     pairing: any;
     mother: { name: string; email: string };
@@ -169,10 +215,11 @@ export const familyApi = {
   },
 
   /**
-   * Caregiver checks if linked
+   * Caregiver checks if linked or pending
    */
   getCaregiverStatus: async (): Promise<{
     isPaired: boolean;
+    status: 'ACTIVE' | 'PENDING' | 'NONE';
     pairing: any;
     mother: any;
   }> => {
@@ -207,3 +254,4 @@ export const familyApi = {
     return res.data;
   },
 };
+

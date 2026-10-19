@@ -42,6 +42,11 @@ export async function fetchContent(
         updatedAt: c.updatedAt,
         body: c.body || c.summary || '',
         summary: c.summary || '',
+        babySize: c.babySize || '',
+        babyLength: c.babyLength || '',
+        babyWeight: c.babyWeight || '',
+        fetalHighlight: c.fetalHighlight || '',
+        maternalTip: c.maternalTip || '',
       }));
 
       return {
@@ -73,14 +78,19 @@ export async function fetchContentById(id: string): Promise<PregnancyContent | n
         title: c.title,
         week: c.week,
         type: 'baby_development',
-        status: 'published',
-        author: 'Clinical Obstetric Board',
+        status: (c.status || 'published') as ContentStatus,
+        author: c.author || 'Clinical Obstetric Board',
         source: 'ACOG Guidelines',
         version: 1,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        body: c.fetalHighlight || c.summary || '',
+        createdAt: c.createdAt || new Date().toISOString(),
+        updatedAt: c.updatedAt || new Date().toISOString(),
+        body: c.body || c.fetalHighlight || c.summary || '',
         summary: c.summary || '',
+        babySize: c.babySize || '',
+        babyLength: c.babyLength || '',
+        babyWeight: c.babyWeight || '',
+        fetalHighlight: c.fetalHighlight || '',
+        maternalTip: c.maternalTip || '',
       };
     }
   } catch (e) {
@@ -97,7 +107,12 @@ export async function createContent(
       week: data.week,
       title: data.title,
       summary: data.summary,
-      fetalHighlight: data.body,
+      body: data.body,
+      babySize: data.babySize,
+      babyLength: data.babyLength,
+      babyWeight: data.babyWeight,
+      fetalHighlight: data.fetalHighlight || data.body,
+      maternalTip: data.maternalTip,
       status: data.status,
       category: data.type,
       author: data.author,
@@ -136,7 +151,12 @@ export async function updateContent(
       week: data.week,
       title: data.title,
       summary: data.summary,
-      fetalHighlight: data.body,
+      body: data.body,
+      babySize: data.babySize,
+      babyLength: data.babyLength,
+      babyWeight: data.babyWeight,
+      fetalHighlight: data.fetalHighlight || data.body,
+      maternalTip: data.maternalTip,
       status: data.status,
     });
   } catch (e) {
@@ -156,6 +176,11 @@ export async function updateContent(
     updatedAt: new Date().toISOString(),
     body: data.body || '',
     summary: data.summary || '',
+    babySize: data.babySize || '',
+    babyLength: data.babyLength || '',
+    babyWeight: data.babyWeight || '',
+    fetalHighlight: data.fetalHighlight || '',
+    maternalTip: data.maternalTip || '',
   };
 }
 
@@ -177,6 +202,37 @@ export async function publishContent(id: string): Promise<{ success: boolean; me
   }
 }
 
+export async function fetchTasksForWeek(week: number): Promise<any[]> {
+  try {
+    const res = await apiClient.get(`/pregnancy-content/public/tasks/week/${week}`);
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn(`Failed to fetch tasks for week ${week}:`, e);
+  }
+  return [];
+}
+
+export async function createWeeklyTask(dto: {
+  week: number;
+  title: string;
+  category: string;
+  timeStr?: string;
+  timeOfDay?: string;
+  emoji?: string;
+  description?: string;
+  clinicalRationale?: string;
+}): Promise<any> {
+  const res = await apiClient.post('/pregnancy-content/admin/tasks/create', dto);
+  return res?.data?.data;
+}
+
+export async function deleteWeeklyTask(taskId: string): Promise<boolean> {
+  const res = await apiClient.delete(`/pregnancy-content/admin/tasks/${taskId}`);
+  return !!res?.data?.success;
+}
+
 export const contentApi = {
   fetchContent,
   fetchContentById,
@@ -184,4 +240,8 @@ export const contentApi = {
   updateContent,
   submitForReview,
   publishContent,
+  fetchTasksForWeek,
+  createWeeklyTask,
+  deleteWeeklyTask,
 };
+

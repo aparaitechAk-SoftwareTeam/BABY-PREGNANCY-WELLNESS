@@ -30,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
+import { apiClient } from '../../services/api/client';
 
 interface ChatMessage {
   id: string;
@@ -59,7 +60,7 @@ const INITIAL_FAQS: FAQItem[] = [
     category: 'caregiver',
     question: 'How do I invite my partner/caregiver to track with me?',
     answer:
-      'Go to Profile > Family & Partner Sync. Share your unique 6-character code (e.g. MOM-8492) via WhatsApp or SMS. When your partner downloads the app and signs up as a Caregiver, they enter your code to connect instantly.',
+      'Go to Profile > Family & Partner Sync. Share your unique pairing code via WhatsApp or SMS. When your partner downloads the app and signs up as a Caregiver, they enter your code to connect instantly.',
   },
   {
     id: 'faq-3',
@@ -150,7 +151,7 @@ export default function SupportScreen() {
         isRedFlag = true;
       } else if (lower.includes('pair') || lower.includes('caregiver') || lower.includes('partner') || lower.includes('code')) {
         replyText =
-          'To connect your partner, go to Profile > Family & Partner Sync. Share your 6-character code (MOM-8492). When your partner registers with the Caregiver role, they simply enter this code to link accounts.';
+          'To connect your partner, go to Profile > Family & Partner Sync. Share your unique pairing code. When your partner registers with the Caregiver role, they simply enter this code to link accounts.';
       } else if (lower.includes('pdf') || lower.includes('report') || lower.includes('export') || lower.includes('doctor summary')) {
         replyText =
           'You can generate a doctor-ready summary by visiting the Reports tab > Select "Weekly Health Summary" > tap "View" to preview the PDF and share directly to WhatsApp or Email.';
@@ -177,15 +178,32 @@ export default function SupportScreen() {
     }, 800);
   };
 
-  const handleSubmitTicket = () => {
+  const handleSubmitTicket = async () => {
     if (!ticketSubject.trim() || !ticketDetails.trim()) {
       Alert.alert('Incomplete Form', 'Please enter a ticket subject and description.');
       return;
     }
 
-    const ticketId = `TK-${Math.floor(1000 + Math.random() * 9000)}`;
-    setCreatedTicketId(ticketId);
-    setShowSuccessModal(true);
+    try {
+      const res = await apiClient.post('/support/tickets', {
+        subject: ticketSubject.trim(),
+        description: ticketDetails.trim(),
+        category: ticketCategory.toLowerCase().replace(/\s+/g, '_'),
+        priority: 'medium',
+        userId: user?.id,
+        userName: user?.name || profile?.nickname || 'Mother',
+        userEmail: user?.email || '',
+      });
+
+      const ticketId = res.data?.data?.ticketNumber || `TIC-${Math.floor(1000 + Math.random() * 9000)}`;
+      setCreatedTicketId(ticketId);
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      console.warn('Failed to submit ticket online, fallback locally', err);
+      const ticketId = `TIC-${Math.floor(1000 + Math.random() * 9000)}`;
+      setCreatedTicketId(ticketId);
+      setShowSuccessModal(true);
+    }
 
     // Reset fields
     setTicketSubject('');

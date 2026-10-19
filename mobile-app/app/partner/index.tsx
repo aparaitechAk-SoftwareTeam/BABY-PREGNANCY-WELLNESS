@@ -60,7 +60,7 @@ export default function PartnerSyncScreen() {
   const generateNewCode = useFamilyStore((state) => state.generateNewCode);
   const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
 
-  const inviteCode = pairingCode || 'MOM-8492';
+  const inviteCode = pairingCode || (isLoadingMotherCode ? 'Loading...' : 'Generating code...');
 
   React.useEffect(() => {
     fetchMotherPairingInfo();

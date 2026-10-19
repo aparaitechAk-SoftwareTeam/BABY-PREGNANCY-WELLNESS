@@ -28,18 +28,18 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'User Management', path: '/users', icon: Users },
-  { label: 'Pregnancy Content', path: '/content', icon: BookOpen },
-  { label: 'Week-by-Week Content', path: '/content/week-by-week', icon: CalendarDays },
-  { label: 'FAQ Management', path: '/faqs', icon: HelpCircle },
-  { label: 'Announcements', path: '/announcements', icon: Megaphone },
-  { label: 'Notification Management', path: '/notifications', icon: Bell },
-  { label: 'Support Overview', path: '/support', icon: LifeBuoy, roles: ['admin', 'support_agent'] },
-  { label: 'Subscription Management', path: '/subscriptions', icon: CreditCard },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
+  { label: 'User Management', path: '/users', icon: Users, roles: ['admin'] },
+  { label: 'Pregnancy Content', path: '/content', icon: BookOpen, roles: ['admin'] },
+  { label: 'Week-by-Week Content', path: '/content/week-by-week', icon: CalendarDays, roles: ['admin'] },
+  { label: 'FAQ Management', path: '/faqs', icon: HelpCircle, roles: ['admin'] },
+  { label: 'Announcements', path: '/announcements', icon: Megaphone, roles: ['admin'] },
+  { label: 'Notification Management', path: '/notifications', icon: Bell, roles: ['admin'] },
+  { label: 'Support Overview', path: '/support', icon: LifeBuoy, roles: ['admin'] },
+  { label: 'Subscription Management', path: '/subscriptions', icon: CreditCard, roles: ['admin'] },
   { label: 'Audit Logs', path: '/audit', icon: ScrollText, roles: ['admin'] },
   { label: 'Role & Permission Management', path: '/roles', icon: ShieldCheck, roles: ['admin'] },
-  { label: 'Settings', path: '/settings', icon: Settings },
+  { label: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
 ];
 
 export const SUPPORT_NAV_ITEMS: NavItem[] = [
@@ -123,8 +123,3 @@ export const HELP_CENTER_CATEGORIES = [
   'Privacy & Security',
 ];
 
-export const SUPPORT_AGENTS = [
-  { id: 'admin-003', name: 'Maria Garcia' },
-  { id: 'admin-004', name: 'Alex Lee' },
-  { id: 'admin-005', name: 'Jamie Taylor' },
-];

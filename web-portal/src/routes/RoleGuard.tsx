@@ -9,6 +9,11 @@ export function RoleGuard({ children, allowedRoles }: { children: ReactNode; all
   const location = useLocation();
 
   if (!role || !allowedRoles.includes(role)) {
+    // Support agents attempting to access admin routes are directed straight to the Support Team console
+    if (role === 'support_agent') {
+      return <Navigate to="/support-team" replace />;
+    }
+
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">

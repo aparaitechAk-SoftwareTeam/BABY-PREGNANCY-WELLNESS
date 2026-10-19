@@ -33,12 +33,19 @@ interface TimelineState {
   getFilteredItems: (currentWeek?: number) => TimelineItem[];
 }
 
-const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
+function calculateWeekDate(targetWeek: number, currentWeek: number = 20): string {
+  const diffWeeks = targetWeek - currentWeek;
+  const targetTime = Date.now() + diffWeeks * 7 * 24 * 60 * 60 * 1000;
+  const d = new Date(targetTime);
+  const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `Week ${targetWeek} • ${monthDay}`;
+}
+
+const CLINICAL_TIMELINE_TEMPLATE: Omit<TimelineItem, 'dateStr'>[] = [
   {
     id: 'tl-today-vitamins',
     title: 'Daily Prenatal Multivitamin & Hydration',
     type: 'routine_habit',
-    dateStr: 'Daily • Morning',
     targetWeek: 20,
     status: 'today',
     description: 'Essential micronutrients & iron absorption with citrus juice or breakfast.',
@@ -50,7 +57,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-milestone-halfway',
     title: 'Halfway Milestone! (Week 20)',
     type: 'milestone',
-    dateStr: 'Week 20',
     targetWeek: 20,
     status: 'upcoming',
     description: 'You have reached 50% of your pregnancy journey! Baby is roughly 26 cm and can hear sounds.',
@@ -62,7 +68,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-test-gtt',
     title: 'Oral Glucose Tolerance Screening (GTT)',
     type: 'clinical_test',
-    dateStr: 'Week 24 • Nov 12, 2026',
     targetWeek: 24,
     status: 'upcoming',
     doctorOrLocation: 'Pathology Diagnostics Lab',
@@ -76,7 +81,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-vaccine-tdap',
     title: 'Tdap (Tetanus, Diphtheria, Pertussis) Vaccine',
     type: 'vaccination',
-    dateStr: 'Week 28 • Dec 10, 2026',
     targetWeek: 28,
     status: 'upcoming',
     doctorOrLocation: 'Maternity Clinic / Hospital',
@@ -90,7 +94,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-milestone-viability',
     title: 'Fetal Viability Milestone (Week 24)',
     type: 'milestone',
-    dateStr: 'Week 24 • Nov 10, 2026',
     targetWeek: 24,
     status: 'upcoming',
     description: 'A major physiological threshold where baby lungs begin producing surfactant.',
@@ -102,7 +105,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-test-growth-scan',
     title: 'Third Trimester Fetal Growth Ultrasound',
     type: 'clinical_test',
-    dateStr: 'Week 32 • Jan 07, 2027',
     targetWeek: 32,
     status: 'upcoming',
     doctorOrLocation: 'Ultrasound Imaging Suite',
@@ -116,7 +118,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-test-gbs-swab',
     title: 'Group B Streptococcus (GBS) Screening',
     type: 'clinical_test',
-    dateStr: 'Week 36 • Feb 04, 2027',
     targetWeek: 36,
     status: 'upcoming',
     doctorOrLocation: 'Maternity Clinic / Hospital',
@@ -130,7 +131,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-milestone-full-term',
     title: 'Full Term Milestone! (Week 37)',
     type: 'milestone',
-    dateStr: 'Week 37 • Feb 11, 2027',
     targetWeek: 37,
     status: 'upcoming',
     description: 'Baby is fully developed and ready for birth at any time. Pack hospital bag!',
@@ -142,7 +142,6 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
     id: 'tl-milestone-edd',
     title: 'Estimated Delivery Date (EDD)',
     type: 'milestone',
-    dateStr: 'Week 40 • Mar 04, 2027',
     targetWeek: 40,
     status: 'upcoming',
     doctorOrLocation: 'Labor & Delivery Hospital',
@@ -153,10 +152,15 @@ const DEFAULT_TIMELINE_ITEMS: TimelineItem[] = [
   },
 ];
 
+import { useAppointmentStore } from './appointment.store';
+
 export const useTimelineStore = create<TimelineState>((set, get) => ({
   filter: 'all',
   searchQuery: '',
-  items: DEFAULT_TIMELINE_ITEMS,
+  items: CLINICAL_TIMELINE_TEMPLATE.map((item) => ({
+    ...item,
+    dateStr: calculateWeekDate(item.targetWeek),
+  })),
 
   setFilter: (filter) => set({ filter }),
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -172,7 +176,24 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   getFilteredItems: (currentWeek = 20) => {
     const { items, filter, searchQuery } = get();
 
-    return items.filter((item) => {
+    // Map live appointments from appointment store into timeline items
+    const liveAppointments = useAppointmentStore.getState().appointments.map((appt) => ({
+      id: appt.id,
+      title: appt.title,
+      type: 'appointment' as const,
+      dateStr: `${appt.dateStr} • ${appt.timeStr}`,
+      targetWeek: currentWeek,
+      status: (appt.isCompleted ? 'completed' : 'upcoming') as 'completed' | 'upcoming',
+      doctorOrLocation: appt.doctorName ? `Dr. ${appt.doctorName}${appt.hospitalName ? ` (${appt.hospitalName})` : ''}` : appt.hospitalName || 'Clinic Visit',
+      description: appt.notes || 'Clinical consultation and checkup.',
+      badgeLabel: 'APPOINTMENT',
+      badgeColor: '#0EA5E9',
+      isCompleted: appt.isCompleted || false,
+    }));
+
+    const allItems = [...liveAppointments, ...items];
+
+    return allItems.filter((item) => {
       // Category filter
       let matchesFilter = true;
       if (filter === 'appointments') matchesFilter = item.type === 'appointment';
@@ -191,3 +212,4 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     });
   },
 }));
+

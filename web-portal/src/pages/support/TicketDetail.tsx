@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketApi } from '@/services/ticket.api';
-import { SUPPORT_AGENTS, TICKET_PRIORITIES, TICKET_STATUSES } from '@/constants';
+import { usersApi } from '@/services/users.api';
+import { TICKET_PRIORITIES, TICKET_STATUSES } from '@/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,11 @@ export function TicketDetail() {
     queryKey: ['ticketMessages', id],
     queryFn: () => ticketApi.fetchTicketMessages(id!),
     enabled: !!id,
+  });
+
+  const { data: staffMembers = [] } = useQuery({
+    queryKey: ['staffMembers'],
+    queryFn: usersApi.fetchStaffMembers,
   });
 
   const handleSend = async () => {
@@ -298,14 +304,18 @@ export function TicketDetail() {
                 <Select
                   value={ticket.assignedAgentId || 'unassigned'}
                   onValueChange={(v) => {
-                    const agent = SUPPORT_AGENTS.find((a) => a.id === v);
-                    if (agent) handleAssign(agent.id, agent.name);
+                    const agent = (staffMembers as any[]).find((a) => a.id === v);
+                    if (agent) handleAssign(agent.id, agent.displayName || agent.email);
                   }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {SUPPORT_AGENTS.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}
+                    {(staffMembers as any[]).map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.displayName || a.email} ({a.role})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

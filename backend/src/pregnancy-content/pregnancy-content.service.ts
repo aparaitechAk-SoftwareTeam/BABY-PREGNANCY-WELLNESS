@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 
 // Standard 40-Week Baby Size Comparisons Reference
@@ -24,9 +24,345 @@ function getMetricsForWeek(week: number) {
   return DEFAULT_BABY_METRICS[closest] || DEFAULT_BABY_METRICS[20];
 }
 
+function getClinicallyTailoredTasksForWeek(week: number) {
+  const tasks: Array<{
+    week: number;
+    title: string;
+    category: string;
+    timeStr: string;
+    timeOfDay: string;
+    emoji: string;
+    description: string;
+    clinicalRationale: string;
+    isCompleted: boolean;
+  }> = [];
+
+  if (week <= 12) {
+    // Trimester 1 (Weeks 1 - 12)
+    tasks.push(
+      {
+        week,
+        title: 'Prenatal Folic Acid & Multivitamins',
+        category: 'medication',
+        timeStr: '08:30 AM',
+        timeOfDay: 'morning',
+        emoji: '💊',
+        description: 'Take 400-800mcg folic acid with breakfast. Essential for embryonic neural tube closure.',
+        clinicalRationale: 'Adequate early folate reduces neural tube defects by up to 70%.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Morning Hydration & Nausea Management',
+        category: 'hydration',
+        timeStr: '11:00 AM',
+        timeOfDay: 'morning',
+        emoji: '💧',
+        description: 'Target 1,000 ml before lunch. Sip small amounts with lemon or ginger if experiencing morning sickness.',
+        clinicalRationale: 'Maintains maternal intravascular volume and reduces dizziness and vomiting.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Gentle Diaphragmatic Breathing & Rest',
+        category: 'exercise',
+        timeStr: '03:00 PM',
+        timeOfDay: 'afternoon',
+        emoji: '🧘‍♀️',
+        description: '10 minutes of slow belly breathing and posture realignment. Elevate legs slightly.',
+        clinicalRationale: 'Counters maternal fatigue induced by rising progesterone levels.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Nutrient-Dense Light Evening Meal',
+        category: 'nutrition',
+        timeStr: '07:30 PM',
+        timeOfDay: 'evening',
+        emoji: '🥗',
+        description: 'Lean proteins, dark leafy greens, whole grains, and healthy fats. Avoid spicy or greasy triggers.',
+        clinicalRationale: 'Stabilizes nocturnal blood sugar and reduces gastroesophageal acid reflux.',
+        isCompleted: false,
+      },
+    );
+
+    if (week === 8) {
+      tasks.push({
+        week,
+        title: 'First Prenatal Dating Ultrasound',
+        category: 'clinical',
+        timeStr: '10:00 AM',
+        timeOfDay: 'morning',
+        emoji: '🩺',
+        description: 'Confirm intrauterine pregnancy, verify gestational age, and observe embryonic heartbeat.',
+        clinicalRationale: 'Establishes accurate expected date of delivery (EDD) and baseline vitals.',
+        isCompleted: false,
+      });
+    }
+
+    if (week === 12) {
+      tasks.push({
+        week,
+        title: 'First Trimester Screening & NT Scan',
+        category: 'clinical',
+        timeStr: '09:30 AM',
+        timeOfDay: 'morning',
+        emoji: '🔬',
+        description: 'Nuchal Translucency (NT) ultrasound and maternal serum dual marker screen.',
+        clinicalRationale: 'Evaluates chromosomal risk profiles and confirms anatomical development.',
+        isCompleted: false,
+      });
+    }
+  } else if (week <= 27) {
+    // Trimester 2 (Weeks 13 - 27)
+    tasks.push(
+      {
+        week,
+        title: 'Prenatal Multivitamin + Iron Supplement',
+        category: 'medication',
+        timeStr: '08:30 AM',
+        timeOfDay: 'morning',
+        emoji: '💊',
+        description: 'Take with citrus or vitamin C to maximize bioavailability. Avoid dairy within 1 hour.',
+        clinicalRationale: 'Supports massive 45% maternal blood volume expansion and prevents anemia.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Midday Hydration Target (2,000 - 2,500 ml)',
+        category: 'hydration',
+        timeStr: '01:00 PM',
+        timeOfDay: 'afternoon',
+        emoji: '💧',
+        description: 'Keep a water bottle close. Hydration is vital for healthy amniotic fluid production.',
+        clinicalRationale: 'Maintains Amniotic Fluid Index (AFI) and prevents Braxton Hicks contractions.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: '15-Min Safe Pelvic Floor & Lumbar Stretches',
+        category: 'exercise',
+        timeStr: '04:30 PM',
+        timeOfDay: 'afternoon',
+        emoji: '🧘‍♀️',
+        description: 'Gentle cat-cow, pelvic tilts, and butterfly stretches to relieve lower back pressure.',
+        clinicalRationale: 'Alleviates lumbar compression and improves pelvic joint flexibility.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Calcium & Vitamin D3 Supplement',
+        category: 'medication',
+        timeStr: '08:30 PM',
+        timeOfDay: 'night',
+        emoji: '🥛',
+        description: 'Take after dinner, separated by at least 2 hours from your morning iron dose.',
+        clinicalRationale: 'Prevents absorption competition with iron while supporting fetal skeletal mineralization.',
+        isCompleted: false,
+      },
+    );
+
+    if (week === 20) {
+      tasks.push({
+        week,
+        title: 'Level-II Detailed Fetal Anatomy Ultrasound',
+        category: 'clinical',
+        timeStr: '10:00 AM',
+        timeOfDay: 'morning',
+        emoji: '🔬',
+        description: 'Comprehensive 20-week anomaly scan examining baby brain, heart, kidneys, spine, and placenta position.',
+        clinicalRationale: 'The cornerstone scan of mid-pregnancy to evaluate complete structural organogenesis.',
+        isCompleted: false,
+      });
+    }
+
+    if (week === 24 || week === 26) {
+      tasks.push({
+        week,
+        title: 'Gestational Diabetes Screening (OGTT)',
+        category: 'clinical',
+        timeStr: '08:30 AM',
+        timeOfDay: 'morning',
+        emoji: '🩸',
+        description: 'Oral Glucose Tolerance Test following overnight fasting as prescribed by your doctor.',
+        clinicalRationale: 'Screens for gestational hyperglycemia to ensure normal fetal macrosomia prevention.',
+        isCompleted: false,
+      });
+    }
+  } else {
+    // Trimester 3 (Weeks 28 - 40)
+    tasks.push(
+      {
+        week,
+        title: 'Morning Prenatal Vitamin + Iron Dosage',
+        category: 'medication',
+        timeStr: '08:30 AM',
+        timeOfDay: 'morning',
+        emoji: '💊',
+        description: 'Supports high third-trimester fetal iron accumulation and maternal hemoglobin.',
+        clinicalRationale: 'Fetal demand for iron peaks in the third trimester for neonatal reserves.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Hydration Target & Electrolyte Balance (2,500 ml)',
+        category: 'hydration',
+        timeStr: '12:00 PM',
+        timeOfDay: 'afternoon',
+        emoji: '💧',
+        description: 'Sip steadily throughout the day. Taper fluid intake 1 hour before sleep to avoid nighttime disruption.',
+        clinicalRationale: 'Facilitates constant amniotic fluid renewal and minimizes lower limb edema.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Pelvic Flex & Safe Birth Ball Rocking',
+        category: 'exercise',
+        timeStr: '04:00 PM',
+        timeOfDay: 'afternoon',
+        emoji: '🧘‍♀️',
+        description: 'Pelvic circles on yoga ball and gentle pelvic floor relaxation stretches.',
+        clinicalRationale: 'Optimizes fetal descent and relieves sacrococcygeal pressure.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Evening Cardiff Kick Counting Session',
+        category: 'kicks',
+        timeStr: '07:30 PM',
+        timeOfDay: 'evening',
+        emoji: '👣',
+        description: 'Rest on your left side post-dinner and count 10 distinct fetal movements.',
+        clinicalRationale: 'Cardiff protocol: 10 movements within 2 hours indicates healthy placental oxygenation.',
+        isCompleted: false,
+      },
+      {
+        week,
+        title: 'Calcium Supplement & Left-Side SOS Sleep Position',
+        category: 'sleep',
+        timeStr: '10:00 PM',
+        timeOfDay: 'night',
+        emoji: '🛏️',
+        description: 'Place pregnancy pillow between knees. Sleep tilted on left side to optimize IVC return.',
+        clinicalRationale: 'Relieves pressure on the inferior vena cava and optimizes placental perfusion.',
+        isCompleted: false,
+      },
+    );
+
+    if (week === 28) {
+      tasks.push({
+        week,
+        title: 'Trimester 3 Kick Counting Baseline & Blood Check',
+        category: 'clinical',
+        timeStr: '09:00 AM',
+        timeOfDay: 'morning',
+        emoji: '🩸',
+        description: 'Repeat CBC, antibody screen (Anti-D injection if Rh-negative), and establish daily kick counting.',
+        clinicalRationale: 'Prevents Rh isoimmunization and tracks late-pregnancy hemoglobin levels.',
+        isCompleted: false,
+      });
+    }
+
+    if (week === 35 || week === 36) {
+      tasks.push({
+        week,
+        title: 'Pack Hospital Go-Bag for Mom, Baby & Partner',
+        category: 'planning',
+        timeStr: '02:00 PM',
+        timeOfDay: 'afternoon',
+        emoji: '🎒',
+        description: 'Pack maternity records, nursing bras, baby clothes, swaddles, toiletries, and phone chargers.',
+        clinicalRationale: 'Ensures stress-free emergency readiness as labor can initiate anytime after 36 weeks.',
+        isCompleted: false,
+      });
+    }
+
+    if (week === 36) {
+      tasks.push({
+        week,
+        title: 'Group B Streptococcus (GBS) Screening Swab',
+        category: 'clinical',
+        timeStr: '10:30 AM',
+        timeOfDay: 'morning',
+        emoji: '🩺',
+        description: 'Routine 36-week vagino-rectal culture swab performed by your obstetrician.',
+        clinicalRationale: 'Identifies GBS colonization to determine intrapartum antibiotic prophylaxis.',
+        isCompleted: false,
+      });
+    }
+
+    if (week >= 37) {
+      tasks.push({
+        week,
+        title: 'Weekly Obstetric Checkup & Fetal Presentation',
+        category: 'clinical',
+        timeStr: '10:00 AM',
+        timeOfDay: 'morning',
+        emoji: '👩‍⚕️',
+        description: 'Check blood pressure, urine albumin, fundal height, cervical status, and fetal cephalic presentation.',
+        clinicalRationale: 'Monitors preeclampsia risk and confirms baby is head-down for delivery.',
+        isCompleted: false,
+      });
+    }
+  }
+
+  return tasks;
+}
+
 @Injectable()
-export class PregnancyContentService {
+export class PregnancyContentService implements OnModuleInit {
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    await this.seedAllWeeksIfEmpty();
+    await this.seedAllWeeklyTasksIfEmpty();
+  }
+
+  private async seedAllWeeklyTasksIfEmpty() {
+    try {
+      for (let w = 1; w <= 40; w++) {
+        const weekCount = await (this.prisma as any).weeklyTask.count({
+          where: { week: w, userId: null },
+        });
+        if (weekCount === 0) {
+          const tasks = getClinicallyTailoredTasksForWeek(w);
+          for (const t of tasks) {
+            await (this.prisma as any).weeklyTask.create({ data: t });
+          }
+        }
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  }
+
+  private async seedAllWeeksIfEmpty() {
+    try {
+      const count = await (this.prisma as any).pregnancyContent.count();
+      if (count === 0) {
+        const items = [];
+        for (let w = 1; w <= 40; w++) {
+          const metric = getMetricsForWeek(w);
+          items.push({
+            week: w,
+            title: `Week ${w} Fetal Development & Maternal Care`,
+            summary: `Baby is approximately the size of a ${metric.name}. ${metric.highlight}`,
+            body: `During Week ${w} of pregnancy, your baby continues active organogenesis and neural growth. Clinical advice: ${metric.tip} Maintain maternal hydration and consistent prenatal checkups.`,
+            babySize: metric.name,
+            babyLength: metric.length,
+            babyWeight: metric.weight,
+            fetalHighlight: metric.highlight,
+            maternalTip: metric.tip,
+            status: 'published',
+            author: 'AparaiTech Clinical Board',
+          });
+        }
+        await (this.prisma as any).pregnancyContent.createMany({ data: items });
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  }
 
   // 1. GET WEEKLY CONTENT (Live from DB or seeded on demand)
   async getContentByWeek(week: number) {
@@ -143,55 +479,9 @@ export class PregnancyContentService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // If no tasks exist for this week, seed default routine items into DB
+    // If no tasks exist for this week, seed clinically tailored routine items into DB
     if (!records || records.length === 0) {
-      const defaultTasks = [
-        {
-          week: safeWeek,
-          title: 'Prenatal Vitamins & Folic Acid',
-          category: 'medication',
-          timeStr: '08:30 AM',
-          timeOfDay: 'morning',
-          emoji: '💊',
-          description: 'Essential micronutrients & neural tube support. Take with breakfast.',
-          clinicalRationale: 'Maximizes iron and folate absorption.',
-          isCompleted: false,
-        },
-        {
-          week: safeWeek,
-          title: 'Hydration Target (2,000 - 2,500 ml)',
-          category: 'hydration',
-          timeStr: 'Throughout Day',
-          timeOfDay: 'morning',
-          emoji: '💧',
-          description: 'Maintains amniotic fluid index (AFI) and maternal plasma volume.',
-          clinicalRationale: 'Prevents maternal UTIs and Braxton-Hicks cramping.',
-          isCompleted: false,
-        },
-        {
-          week: safeWeek,
-          title: '15-Min Safe Pelvic Floor & Posture Stretch',
-          category: 'exercise',
-          timeStr: '02:30 PM',
-          timeOfDay: 'afternoon',
-          emoji: '🧘‍♀️',
-          description: 'Gentle cat-cow, pelvic tilt & deep diaphragm relaxation.',
-          clinicalRationale: 'Relieves lumbar compression and prepares pelvic flexibility.',
-          isCompleted: false,
-        },
-        {
-          week: safeWeek,
-          title: 'Cardiff Kick Counting Session',
-          category: 'kicks',
-          timeStr: '07:30 PM',
-          timeOfDay: 'evening',
-          emoji: '👣',
-          description: 'Rest on left side post-dinner and count 10 distinct baby movements.',
-          clinicalRationale: 'Peak fetal motility confirms placental oxygenation.',
-          isCompleted: false,
-        },
-      ];
-
+      const defaultTasks = getClinicallyTailoredTasksForWeek(safeWeek);
       for (const t of defaultTasks) {
         await (this.prisma as any).weeklyTask.create({ data: t });
       }
@@ -246,4 +536,13 @@ export class PregnancyContentService {
 
     return { success: true, data: created };
   }
+
+  // 7. ADMIN DELETE WEEKLY TASK
+  async deleteWeeklyTask(taskId: string) {
+    await (this.prisma as any).weeklyTask.delete({
+      where: { id: taskId },
+    });
+    return { success: true, message: 'Weekly task deleted successfully' };
+  }
 }
+

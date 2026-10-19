@@ -39,32 +39,7 @@ interface SavedReport {
   type: string;
 }
 
-const DEFAULT_REPORTS: SavedReport[] = [
-  {
-    id: 'rep-1',
-    title: 'Week 24 OB-GYN Clinical Summary',
-    dateStr: 'Today, Oct 15, 2026',
-    week: 24,
-    fileSize: '320 KB',
-    type: 'Routine Follow-up',
-  },
-  {
-    id: 'rep-2',
-    title: 'Week 20 Anomaly Scan & Vitals Log',
-    dateStr: 'Sep 16, 2026',
-    week: 20,
-    fileSize: '310 KB',
-    type: 'Radiology / Ultrasound',
-  },
-  {
-    id: 'rep-3',
-    title: 'First Trimester Milestone Summary',
-    dateStr: 'Aug 12, 2026',
-    week: 13,
-    fileSize: '180 KB',
-    type: 'Trimester Transition',
-  },
-];
+const DEFAULT_REPORTS: SavedReport[] = [];
 
 const STORAGE_SAVED_REPORTS = 'aparai_saved_reports_v1';
 const CATEGORIES = ['All', 'Routine Follow-up', 'Monthly Review', 'Radiology / Ultrasound', 'Trimester Transition'];
@@ -84,11 +59,8 @@ export default function ReportsHistoryScreen() {
         const stored = await AsyncStorage.getItem(STORAGE_SAVED_REPORTS);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Merge unique with default
-            const ids = new Set(parsed.map((p: any) => p.id));
-            const remainingDefaults = DEFAULT_REPORTS.filter((d) => !ids.has(d.id));
-            setReports([...parsed, ...remainingDefaults]);
+          if (Array.isArray(parsed)) {
+            setReports(parsed);
             return;
           }
         }

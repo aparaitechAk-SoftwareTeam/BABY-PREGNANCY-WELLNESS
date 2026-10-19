@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { ChevronRight, Sparkles, Calendar } from 'lucide-react-native';
+import { contentApi } from '../../services/api/content.api';
 
 interface UnifiedMilestoneCardProps {
   currentWeek: number;
@@ -11,29 +12,26 @@ interface UnifiedMilestoneCardProps {
   onPressDetails?: () => void;
 }
 
-const WEEK_DEVELOPMENTS: Record<
-  number,
-  { fruit: string; emoji: string; length: string; weight: string; insight: string }
-> = {
-  4: { fruit: 'Poppy Seed', emoji: '🌱', length: '1 mm', weight: '< 1 g', insight: 'Neural tube is forming and blastocyst is safely implanting.' },
-  8: { fruit: 'Raspberry', emoji: '🍓', length: '1.6 cm', weight: '1 g', insight: 'Tiny fingers & toes developing. Heart beats at 150 bpm!' },
-  12: { fruit: 'Lime', emoji: '🍋', length: '5.4 cm', weight: '14 g', insight: 'All vital organs, reflexes, and vocal cords are formed.' },
-  16: { fruit: 'Avocado', emoji: '🥑', length: '11.6 cm', weight: '100 g', insight: 'Baby can make facial expressions and sense light.' },
-  20: { fruit: 'Banana', emoji: '🍌', length: '25.6 cm', weight: '300 g', insight: 'You may feel gentle flutters (quickening)! Vernix protects skin.' },
-  24: { fruit: 'Ear of Corn', emoji: '🌽', length: '30 cm', weight: '600 g', insight: 'Hearing is active; baby recognizes your voice and heartbeat.' },
-  28: { fruit: 'Eggplant', emoji: '🍆', length: '37 cm', weight: '1 kg', insight: 'Eyes can blink and baby has regular sleep-wake cycles.' },
-  32: { fruit: 'Pineapple', emoji: '🍍', length: '42 cm', weight: '1.7 kg', insight: 'Bones are hardening and baby is gaining healthy baby fat.' },
-  36: { fruit: 'Papaya', emoji: '🍈', length: '47 cm', weight: '2.6 kg', insight: 'Lungs are nearly mature; baby is settling into the pelvis.' },
-  40: { fruit: 'Watermelon', emoji: '🍉', length: '51 cm', weight: '3.4 kg', insight: 'Full term and ready to take their very first breath!' },
+const FRUIT_EMOJIS: Record<string, string> = {
+  'poppy': '🌱',
+  'raspberry': '🍓',
+  'lime': '🍋',
+  'avocado': '🥑',
+  'banana': '🍌',
+  'corn': '🌽',
+  'eggplant': '🍆',
+  'pineapple': '🍍',
+  'papaya': '🍈',
+  'watermelon': '🍉',
 };
 
-function getWeekData(week: number) {
-  const keys = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40];
-  let selected = keys[0];
-  for (const k of keys) {
-    if (week >= k) selected = k;
+function getEmojiForFruit(fruitName?: string): string {
+  if (!fruitName) return '🌱';
+  const lower = fruitName.toLowerCase();
+  for (const [key, emoji] of Object.entries(FRUIT_EMOJIS)) {
+    if (lower.includes(key)) return emoji;
   }
-  return WEEK_DEVELOPMENTS[selected] || WEEK_DEVELOPMENTS[24];
+  return '🌱';
 }
 
 export function UnifiedMilestoneCard({
@@ -44,11 +42,31 @@ export function UnifiedMilestoneCard({
   dueDate,
   onPressDetails,
 }: UnifiedMilestoneCardProps) {
+  const [liveContent, setLiveContent] = useState<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    contentApi
+      .getContentByWeek(currentWeek)
+      .then((res) => {
+        if (isMounted && res?.data?.data) {
+          setLiveContent(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [currentWeek]);
+
   const totalDays = 280;
   const elapsedDays = Math.min(280, currentWeek * 7 + currentDay);
   const progressPercent = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
 
-  const weekData = getWeekData(currentWeek);
+  const fruitName = liveContent?.babySize || 'Baby';
+  const fruitEmoji = getEmojiForFruit(fruitName);
+  const lengthStr = liveContent?.babyLength || 'Clinical Growth';
+  const weightStr = liveContent?.babyWeight || 'Developing';
 
   const formattedDueDate = new Date(dueDate).toLocaleDateString('en-US', {
     month: 'short',
@@ -103,13 +121,13 @@ export function UnifiedMilestoneCard({
 
           {/* Baby Size Pill */}
           <View style={styles.fruitStrip}>
-            <Text style={styles.fruitEmoji}>{weekData.emoji}</Text>
+            <Text style={styles.fruitEmoji}>{fruitEmoji}</Text>
             <View style={styles.fruitTextCol}>
               <Text style={styles.fruitTitle}>
-                Size of a {weekData.fruit}
+                Size of a {fruitName}
               </Text>
               <Text style={styles.fruitMetrics}>
-                {weekData.length} • {weekData.weight}
+                {lengthStr} • {weightStr}
               </Text>
             </View>
           </View>

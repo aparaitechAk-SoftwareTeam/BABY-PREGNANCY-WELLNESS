@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { RoleGuard } from '@/routes/RoleGuard';
 import { AdminLayout } from '@/layouts/AdminLayout';
@@ -45,8 +46,9 @@ const queryClient = new QueryClient({
   },
 });
 
-function RoleBasedRedirect({ to }: { to: string }) {
-  return <Navigate to={to} replace />;
+function FallbackRedirect() {
+  const { role } = useRole();
+  return <Navigate to={role === 'support_agent' ? '/support-team' : '/dashboard'} replace />;
 }
 
 export default function App() {
@@ -58,12 +60,14 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            {/* Admin Console */}
+            {/* Admin Console - Restricted strictly to ADMIN */}
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <AdminLayout />
+                  <RoleGuard allowedRoles={['admin']}>
+                    <AdminLayout />
+                  </RoleGuard>
                 </ProtectedRoute>
               }
             >
@@ -127,7 +131,7 @@ export default function App() {
               <Route path="profile" element={<SupportProfile />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<FallbackRedirect />} />
           </Routes>
           <Toaster />
         </BrowserRouter>

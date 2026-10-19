@@ -29,88 +29,8 @@ interface RoutineState {
 
 const STORAGE_KEY = '@aparaitech_daily_routine_v1';
 
-const DEFAULT_ROUTINE_TASKS: RoutineTask[] = [
-  {
-    id: 'task-vitamins',
-    title: 'Prenatal Vitamins & Folic Acid',
-    category: 'medication',
-    timeStr: '08:30 AM',
-    timeOfDay: 'morning',
-    emoji: '💊',
-    description: 'Essential micronutrients & neural tube support. Take with breakfast.',
-    isCompleted: false,
-    clinicalRationale: 'Folic acid and iron absorption is maximized when taken with breakfast or citrus juice.',
-  },
-  {
-    id: 'task-water-1',
-    title: 'Hydration Target (First 1,000 ml)',
-    category: 'hydration',
-    timeStr: '11:00 AM',
-    timeOfDay: 'morning',
-    emoji: '💧',
-    description: 'Amniotic fluid maintenance & prevents maternal UTIs.',
-    isCompleted: false,
-    clinicalRationale: 'Maintains optimal blood volume expansion and amniotic fluid index (AFI).',
-  },
-  {
-    id: 'task-stretch',
-    title: '15-Min Safe Pelvic Floor Stretch',
-    category: 'exercise',
-    timeStr: '02:30 PM',
-    timeOfDay: 'afternoon',
-    emoji: '🧘‍♀️',
-    description: 'Gentle cat-cow, pelvic tilt & deep diaphragm relaxation.',
-    isCompleted: false,
-    clinicalRationale: 'Relieves lower back compression and prepares perineal flexibility for delivery.',
-  },
-  {
-    id: 'task-snack',
-    title: 'High-Protein & Fiber Snack',
-    category: 'nutrition',
-    timeStr: '04:30 PM',
-    timeOfDay: 'afternoon',
-    emoji: '🥜',
-    description: 'Handful of almonds/walnuts + Greek yogurt or seasonal fruit.',
-    isCompleted: false,
-    clinicalRationale: 'Stabilizes maternal glucose levels and reduces late afternoon fatigue.',
-  },
-  {
-    id: 'task-kicks',
-    title: 'Baby Kick Counting Session',
-    category: 'kicks',
-    timeStr: '07:30 PM',
-    timeOfDay: 'evening',
-    emoji: '👣',
-    description: 'Cardiff Count-to-10 protocol. Relax on left side post-dinner.',
-    isCompleted: false,
-    clinicalRationale: 'Peak fetal motility occurs in the evening. Reaching 10 movements confirms healthy reactivity.',
-  },
-  {
-    id: 'task-calcium',
-    title: 'Calcium & Vitamin D3 Tablet',
-    category: 'medication',
-    timeStr: '09:00 PM',
-    timeOfDay: 'night',
-    emoji: '🥛',
-    description: 'Supports baby bone ossification. Take separated from iron.',
-    isCompleted: false,
-    clinicalRationale: 'Keep calcium at least 2 hours apart from iron supplements to avoid absorption competition.',
-  },
-  {
-    id: 'task-sleep-posture',
-    title: 'Left-Side SOS Sleep Positioning',
-    category: 'sleep',
-    timeStr: '10:30 PM',
-    timeOfDay: 'night',
-    emoji: '🛏️',
-    description: 'Place pregnancy pillow between knees to optimize IVC circulation.',
-    isCompleted: false,
-    clinicalRationale: 'Left lateral tilt relieves pressure on the inferior vena cava, enhancing uterine perfusion.',
-  },
-];
-
 export const useRoutineStore = create<RoutineState>((set, get) => ({
-  tasks: DEFAULT_ROUTINE_TASKS,
+  tasks: [],
   currentDateStr: new Date().toISOString().split('T')[0],
   isLoading: false,
 
@@ -162,7 +82,7 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
       // Ignore
     }
 
-    set({ tasks: DEFAULT_ROUTINE_TASKS, currentDateStr: todayStr, isLoading: false });
+    set({ tasks: [], currentDateStr: todayStr, isLoading: false });
   },
 
   toggleTask: async (id: string) => {

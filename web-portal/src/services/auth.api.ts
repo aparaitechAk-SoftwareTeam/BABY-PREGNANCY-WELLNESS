@@ -1,52 +1,75 @@
 import { API_BASE_URL } from '@/constants';
-import type {
-  AdminUser,
-} from '@/types';
-import { DEMO_ADMIN_CREDENTIALS } from '@/constants';
-
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import type { AdminUser } from '@/types';
 
 const STORAGE_KEY = 'aparaitech_admin_session';
+const JWT_STORAGE_KEY = 'aparaitech_admin_jwt';
 
+/**
+ * Sign in using live backend POST /api/auth/signin
+ */
 export async function login(email: string, password: string): Promise<AdminUser> {
-  await delay(600);
+  const cleanEmail = (email || '').trim().toLowerCase();
 
-  const adminCreds = DEMO_ADMIN_CREDENTIALS.admin;
-  const supportCreds = DEMO_ADMIN_CREDENTIALS.support;
+  const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: cleanEmail,
+      password: password,
+    }),
+  });
 
-  let user: AdminUser | null = null;
+  const resData = await response.json().catch(() => null);
 
-  if (email === adminCreds.email && password === adminCreds.password) {
-    user = {
-      id: 'admin-001',
-      email: adminCreds.email,
-      displayName: 'Sarah Chen',
-      role: 'admin',
-    };
-  } else if (email === supportCreds.email && password === supportCreds.password) {
-    user = {
-      id: 'admin-003',
-      email: supportCreds.email,
-      displayName: 'Maria Garcia',
-      role: 'support_agent',
-    };
+  if (!response.ok || !resData?.success) {
+    const errorMsg =
+      resData?.message ||
+      (Array.isArray(resData?.message) ? resData.message[0] : null) ||
+      'Invalid email or password. Please verify your credentials.';
+    throw new Error(typeof errorMsg === 'string' ? errorMsg : 'Authentication failed.');
   }
 
-  if (!user) {
-    throw new Error('Invalid email or password. Use demo credentials shown below.');
+  const { token, user } = resData;
+
+  // Verify staff role permissions: only ADMIN or SUPPORT can access the Web Portal
+  const backendRole = (user.role || '').toUpperCase();
+  if (backendRole !== 'ADMIN' && backendRole !== 'SUPPORT') {
+    throw new Error(
+      'Access Denied: Only authorized Administrator or Support staff accounts can access the Web Portal.',
+    );
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-  return user;
+  const mappedRole: 'admin' | 'support_agent' = backendRole === 'ADMIN' ? 'admin' : 'support_agent';
+
+  const adminUser: AdminUser = {
+    id: user.id,
+    email: user.email,
+    displayName: user.name || (mappedRole === 'admin' ? 'System Administrator' : 'Support Specialist'),
+    role: mappedRole,
+    token: token,
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
+  if (token) {
+    localStorage.setItem(JWT_STORAGE_KEY, token);
+  }
+
+  return adminUser;
 }
 
+/**
+ * Clear stored admin session and JWT token
+ */
 export async function logout(): Promise<void> {
-  await delay(200);
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(JWT_STORAGE_KEY);
 }
 
+/**
+ * Retrieve current user from session storage
+ */
 export function getCurrentUser(): AdminUser | null {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return null;
@@ -57,15 +80,32 @@ export function getCurrentUser(): AdminUser | null {
   }
 }
 
+/**
+ * Request password reset link/OTP
+ */
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
-  await delay(800);
-  if (!email || !email.includes('@')) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
     throw new Error('Please enter a valid email address.');
   }
-  return {
-    success: true,
-    message: 'If an account exists for that email, a password reset link has been sent.',
-  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail }),
+    });
+    const data = await res.json().catch(() => null);
+    return {
+      success: true,
+      message: data?.message || 'If an account exists for that email, password reset instructions have been sent.',
+    };
+  } catch {
+    return {
+      success: true,
+      message: 'If an account exists for that email, password reset instructions have been sent.',
+    };
+  }
 }
 
 export const authApi = {

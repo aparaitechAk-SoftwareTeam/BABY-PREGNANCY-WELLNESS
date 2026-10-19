@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 
 export interface TicketFilterDto {
@@ -13,8 +13,88 @@ export interface TicketFilterDto {
 }
 
 @Injectable()
-export class TicketsService {
+export class TicketsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    await this.seedInitialTicketsIfEmpty();
+  }
+
+  private async seedInitialTicketsIfEmpty() {
+    try {
+      const count = await this.ticketModel.count();
+      if (count === 0) {
+        const seedTickets = [
+          {
+            ticketNumber: 'TICK-1001',
+            subject: 'Caregiver pairing code not showing on partner device',
+            description: 'My partner entered the MOM-XXXX pairing code but got a network retry prompt. Can you verify if our pairing link is active?',
+            status: 'open',
+            priority: 'high',
+            category: 'technical',
+            userName: 'Emma Watson',
+            userEmail: 'emma.watson@gmail.com',
+            assignedAgent: 'Maria Garcia',
+            escalated: false,
+          },
+          {
+            ticketNumber: 'TICK-1002',
+            subject: 'How to export clinical doctor consultation PDF report',
+            description: 'I need to provide my OB/GYN with my blood pressure and weight trend logs before next Tuesday appointment.',
+            status: 'awaiting_response',
+            priority: 'medium',
+            category: 'app_usage',
+            userName: 'Priya Sharma',
+            userEmail: 'priya.sharma@gmail.com',
+            assignedAgent: 'Maria Garcia',
+            escalated: false,
+          },
+          {
+            ticketNumber: 'TICK-1003',
+            subject: 'Kick counter session recorded 12 kicks instead of 10',
+            description: 'Can support adjust my morning kick count log session for yesterday? I accidentally tapped twice.',
+            status: 'resolved',
+            priority: 'low',
+            category: 'clinical',
+            userName: 'Jessica Alba',
+            userEmail: 'jessica@gmail.com',
+            assignedAgent: 'Maria Garcia',
+            escalated: false,
+          },
+          {
+            ticketNumber: 'TICK-1004',
+            subject: 'Subscription billing invoice request for hospital reimbursement',
+            description: 'I purchased the Maternal Premium plan and need a formal tax invoice with GSTIN for health insurance claim.',
+            status: 'open',
+            priority: 'urgent',
+            category: 'billing',
+            userName: 'Elena Rostova',
+            userEmail: 'elena@gmail.com',
+            assignedAgent: null,
+            escalated: false,
+          },
+          {
+            ticketNumber: 'TICK-1005',
+            subject: 'Bluetooth sync disconnects during 3rd trimester sleep session',
+            description: 'Caregiver device stopped receiving maternal sleep vitals after the latest OS update. Please advise.',
+            status: 'escalated',
+            priority: 'high',
+            category: 'technical',
+            userName: 'Ananya Patel',
+            userEmail: 'ananya@gmail.com',
+            assignedAgent: 'Maria Garcia',
+            escalated: true,
+          },
+        ];
+
+        for (const t of seedTickets) {
+          await this.ticketModel.create({ data: t });
+        }
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  }
 
   private get ticketModel(): any {
     return (this.prisma as any).supportTicket;

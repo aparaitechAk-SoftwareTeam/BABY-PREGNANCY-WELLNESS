@@ -116,16 +116,23 @@ export default function SignupScreen() {
       return;
     }
 
-    // For caregivers, require joining code
-    if (!isMother && !joiningCode.trim()) {
-      setErrorMessage('Please enter the joining code provided by the mother');
-      return;
-    }
-
-    // Validate joining code for caregivers
-    if (!isMother && joiningCode.trim() !== 'MOTHER123') {
-      setErrorMessage('Invalid joining code. Please check and try again.');
-      return;
+    // Validate caregiver code against live database
+    if (!isMother) {
+      if (!joiningCode.trim()) {
+        setErrorMessage('Please enter the joining code provided by the mother');
+        return;
+      }
+      try {
+        const checkRes = await authApi.validateCaregiverCode(joiningCode.trim().toUpperCase());
+        if (!checkRes?.data?.valid) {
+          setErrorMessage(checkRes?.data?.message || 'Invalid joining code. Please check and try again.');
+          return;
+        }
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || 'Invalid joining code. Please check with the mother.';
+        setErrorMessage(typeof msg === 'string' ? msg : 'Invalid joining code.');
+        return;
+      }
     }
 
     if (!termsAccepted || !privacyAccepted) {
@@ -165,30 +172,48 @@ export default function SignupScreen() {
     setErrorMessage('');
     setSocialLoading('google');
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const role = isMother ? 'MOTHER' : 'CAREGIVER';
 
-      const mockGoogleUser = {
-        id: 'goog_' + Date.now(),
-        name: 'Google User',
-        email: 'user@gmail.com',
-        role: isMother ? 'MOTHER' : 'CAREGIVER',
-        isMother: isMother,
-        createdAt: new Date().toISOString(),
-      };
+      if (!isMother) {
+        if (!joiningCode.trim()) {
+          setErrorMessage('Please enter the joining code provided by the mother before signing up');
+          setSocialLoading(null);
+          return;
+        }
+        const checkRes = await authApi.validateCaregiverCode(joiningCode.trim().toUpperCase());
+        if (!checkRes?.data?.valid) {
+          setErrorMessage(checkRes?.data?.message || 'Invalid joining code. Please check with the mother.');
+          setSocialLoading(null);
+          return;
+        }
+      }
 
-      const mockToken = 'google_signup_token_' + Date.now();
+      const candidateEmail =
+        /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim())
+          ? email.trim().toLowerCase()
+          : `${fullName.trim().toLowerCase().replace(/\s+/g, '.') || 'google.user'}@gmail.com`;
+
+      const response = await authApi.googleAuth({
+        email: candidateEmail,
+        name: fullName.trim() || 'Google User',
+        role,
+        joiningCode: !isMother ? joiningCode.trim().toUpperCase() : undefined,
+      });
+
+      const { user, token } = response.data;
 
       await resetPregnancyProfile();
-      await setUser(mockGoogleUser);
-      await setToken(mockToken);
+      await setUser(user);
+      await setToken(token);
 
       if (isMother) {
         router.replace('/(onboarding)/pregnancy-setup');
       } else {
         router.replace('/(caregiver)');
       }
-    } catch {
-      setErrorMessage('Google Sign-Up failed. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Google Sign-Up failed. Please try again.';
+      setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Google Sign-Up failed.');
     } finally {
       setSocialLoading(null);
     }
@@ -198,30 +223,48 @@ export default function SignupScreen() {
     setErrorMessage('');
     setSocialLoading('apple');
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const role = isMother ? 'MOTHER' : 'CAREGIVER';
 
-      const mockAppleUser = {
-        id: 'apple_' + Date.now(),
-        name: 'Apple User',
-        email: 'user@privaterelay.appleid.com',
-        role: isMother ? 'MOTHER' : 'CAREGIVER',
-        isMother: isMother,
-        createdAt: new Date().toISOString(),
-      };
+      if (!isMother) {
+        if (!joiningCode.trim()) {
+          setErrorMessage('Please enter the joining code provided by the mother before signing up');
+          setSocialLoading(null);
+          return;
+        }
+        const checkRes = await authApi.validateCaregiverCode(joiningCode.trim().toUpperCase());
+        if (!checkRes?.data?.valid) {
+          setErrorMessage(checkRes?.data?.message || 'Invalid joining code. Please check with the mother.');
+          setSocialLoading(null);
+          return;
+        }
+      }
 
-      const mockToken = 'apple_signup_token_' + Date.now();
+      const candidateEmail =
+        /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim())
+          ? email.trim().toLowerCase()
+          : 'apple.user@privaterelay.appleid.com';
+
+      const response = await authApi.googleAuth({
+        email: candidateEmail,
+        name: fullName.trim() || 'Apple User',
+        role,
+        joiningCode: !isMother ? joiningCode.trim().toUpperCase() : undefined,
+      });
+
+      const { user, token } = response.data;
 
       await resetPregnancyProfile();
-      await setUser(mockAppleUser);
-      await setToken(mockToken);
+      await setUser(user);
+      await setToken(token);
 
       if (isMother) {
         router.replace('/(onboarding)/pregnancy-setup');
       } else {
         router.replace('/(caregiver)');
       }
-    } catch {
-      setErrorMessage('Apple Sign-Up failed. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Apple Sign-Up failed. Please try again.';
+      setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Apple Sign-Up failed.');
     } finally {
       setSocialLoading(null);
     }

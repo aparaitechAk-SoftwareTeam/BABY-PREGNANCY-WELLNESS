@@ -1,96 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { contentApi } from '../../services/api/content.api';
 
 interface BabyDevelopmentCardProps {
   week: number;
   onPressExplore?: () => void;
 }
 
-// 40-Week developmental data catalog
-const WEEK_DEVELOPMENTS: Record<number, { fruit: string; emoji: string; length: string; weight: string; insight: string }> = {
-  4: {
-    fruit: 'Poppy Seed',
-    emoji: '🌱',
-    length: '1 mm',
-    weight: '< 1 g',
-    insight: 'The blastocyst is safely implanting into your uterine wall. The neural tube is beginning to form.',
-  },
-  8: {
-    fruit: 'Raspberry',
-    emoji: '🍓',
-    length: '1.6 cm',
-    weight: '1 g',
-    insight: 'Little webbed fingers and toes are developing. Your baby’s heart is beating at 150 bpm!',
-  },
-  12: {
-    fruit: 'Lime',
-    emoji: '🍋',
-    length: '5.4 cm',
-    weight: '14 g',
-    insight: 'All vital organs, reflex muscles, and tiny vocal cords are completely formed.',
-  },
-  16: {
-    fruit: 'Avocado',
-    emoji: '🥑',
-    length: '11.6 cm',
-    weight: '100 g',
-    insight: 'Baby can make facial expressions and may react to bright light through your belly.',
-  },
-  20: {
-    fruit: 'Banana',
-    emoji: '🍌',
-    length: '25.6 cm',
-    weight: '300 g',
-    insight: 'You may start feeling the first gentle flutters (quickening)! Vernix protects delicate baby skin.',
-  },
-  24: {
-    fruit: 'Ear of Corn',
-    emoji: '🌽',
-    length: '30 cm',
-    weight: '600 g',
-    insight: 'Hearing is well-developed. Your baby can now recognize maternal voice cadences and heartbeat.',
-  },
-  28: {
-    fruit: 'Eggplant',
-    emoji: '🍆',
-    length: '37 cm',
-    weight: '1 kg',
-    insight: 'Eyes can blink! Baby has regular sleep and wake cycles and is practicing breathing movements.',
-  },
-  32: {
-    fruit: 'Pineapple',
-    emoji: '🍍',
-    length: '42 cm',
-    weight: '1.7 kg',
-    insight: 'Bones are hardening while skull remains pliable. Baby is gaining insulating body fat.',
-  },
-  36: {
-    fruit: 'Papaya',
-    emoji: '🍈',
-    length: '47 cm',
-    weight: '2.6 kg',
-    insight: 'Lungs are nearly mature. Baby is dropping lower into your pelvis in preparation for birth.',
-  },
-  40: {
-    fruit: 'Watermelon',
-    emoji: '🍉',
-    length: '51 cm',
-    weight: '3.4 kg',
-    insight: 'Full term and ready to meet you! Ready to take their very first breath and be held.',
-  },
+const FRUIT_EMOJIS: Record<string, string> = {
+  'poppy': '🌱',
+  'raspberry': '🍓',
+  'lime': '🍋',
+  'avocado': '🥑',
+  'banana': '🍌',
+  'corn': '🌽',
+  'eggplant': '🍆',
+  'pineapple': '🍍',
+  'papaya': '🍈',
+  'watermelon': '🍉',
 };
 
-function getWeekData(week: number) {
-  const keys = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40];
-  let selected = keys[0];
-  for (const k of keys) {
-    if (week >= k) selected = k;
+function getEmojiForFruit(fruitName?: string): string {
+  if (!fruitName) return '🌱';
+  const lower = fruitName.toLowerCase();
+  for (const [key, emoji] of Object.entries(FRUIT_EMOJIS)) {
+    if (lower.includes(key)) return emoji;
   }
-  return WEEK_DEVELOPMENTS[selected] || WEEK_DEVELOPMENTS[20];
+  return '🌱';
 }
 
 export function BabyDevelopmentCard({ week, onPressExplore }: BabyDevelopmentCardProps) {
-  const data = getWeekData(week);
+  const [liveContent, setLiveContent] = useState<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    contentApi
+      .getContentByWeek(week)
+      .then((res) => {
+        if (isMounted && res?.data?.data) {
+          setLiveContent(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [week]);
+
+  const fruit = liveContent?.babySize || 'Baby';
+  const emoji = getEmojiForFruit(fruit);
+  const length = liveContent?.babyLength || 'Clinical Growth';
+  const weight = liveContent?.babyWeight || 'Active Growth';
+  const insight =
+    liveContent?.fetalHighlight ||
+    liveContent?.summary ||
+    `During Week ${week}, fetal organs and neural pathways continue rapid clinical development.`;
+
+  const data = { fruit, emoji, length, weight, insight };
 
   return (
     <TouchableOpacity

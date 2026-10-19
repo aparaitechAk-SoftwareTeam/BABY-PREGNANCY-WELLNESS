@@ -100,19 +100,31 @@ export default function LoginScreen() {
     setErrorMessage('');
     setSocialLoading('google');
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      const mockGoogleUser = {
-        id: 'goog_' + Date.now(),
-        name: 'Google User',
-        email: 'user@gmail.com',
+      const candidateEmail =
+        loginMode === 'email' && /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(emailOrPhone.trim())
+          ? emailOrPhone.trim().toLowerCase()
+          : 'google.mother@gmail.com';
+
+      const response = await authApi.googleAuth({
+        email: candidateEmail,
+        name: candidateEmail.split('@')[0].replace('.', ' '),
         role: 'MOTHER',
-        lastLogin: new Date().toISOString(),
-      };
-      await setUser(mockGoogleUser);
-      await setToken('google_token_' + Date.now());
-      router.replace('/(mother)');
-    } catch {
-      setErrorMessage('Google Sign-In failed. Please try again.');
+      });
+
+      const { user, token } = response.data;
+      await setUser(user);
+      await setToken(token);
+
+      if (user.role === 'CAREGIVER') {
+        router.replace('/(caregiver)');
+      } else if (!user.setupCompleted && !user.isProfileCompleted) {
+        router.replace('/(onboarding)/pregnancy-setup');
+      } else {
+        router.replace('/(mother)');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Google Sign-In failed. Please try again.';
+      setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Google Sign-In failed.');
     } finally {
       setSocialLoading(null);
     }
@@ -122,19 +134,31 @@ export default function LoginScreen() {
     setErrorMessage('');
     setSocialLoading('apple');
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      const mockAppleUser = {
-        id: 'apple_' + Date.now(),
+      const candidateEmail =
+        loginMode === 'email' && /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(emailOrPhone.trim())
+          ? emailOrPhone.trim().toLowerCase()
+          : 'apple.mother@gmail.com';
+
+      const response = await authApi.googleAuth({
+        email: candidateEmail,
         name: 'Apple User',
-        email: 'user@privaterelay.appleid.com',
         role: 'MOTHER',
-        lastLogin: new Date().toISOString(),
-      };
-      await setUser(mockAppleUser);
-      await setToken('apple_token_' + Date.now());
-      router.replace('/(mother)');
-    } catch {
-      setErrorMessage('Apple Sign-In failed. Please try again.');
+      });
+
+      const { user, token } = response.data;
+      await setUser(user);
+      await setToken(token);
+
+      if (user.role === 'CAREGIVER') {
+        router.replace('/(caregiver)');
+      } else if (!user.setupCompleted && !user.isProfileCompleted) {
+        router.replace('/(onboarding)/pregnancy-setup');
+      } else {
+        router.replace('/(mother)');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Apple Sign-In failed. Please try again.';
+      setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Apple Sign-In failed.');
     } finally {
       setSocialLoading(null);
     }

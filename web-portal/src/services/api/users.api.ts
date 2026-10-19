@@ -74,9 +74,82 @@ export async function reactivateUser(id: string): Promise<{ success: boolean; me
   }
 }
 
+export async function createStaffMember(data: {
+  name: string;
+  email: string;
+  password: string;
+  role: 'SUPPORT' | 'ADMIN';
+}): Promise<{ success: boolean; message: string; data: any }> {
+  const res = await apiClient.post('/users/staff', data);
+  return res.data;
+}
+
+export async function fetchStaffMembers(): Promise<any[]> {
+  try {
+    const res = await apiClient.get('/users/staff');
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch staff members:', e);
+  }
+  return [];
+}
+
+export interface DashboardAnalyticsData {
+  metrics: {
+    totalUsers: number;
+    activeUsers: number;
+    activeSubscriptions: number;
+    publishedContent: number;
+    openTickets: number;
+    recentActivity: number;
+    userGrowth: number;
+    subscriptionGrowth: number;
+    contentGrowth: number;
+    ticketChange: number;
+  };
+  charts: {
+    userRegistrationTrend: Array<{ label: string; users: number }>;
+    appUsageTrend: Array<{ label: string; activeUsers: number }>;
+    subscriptionTrend: Array<{ label: string; free: number; premium: number }>;
+    contentStatusData: Array<{ status: string; count: number }>;
+  };
+  recentContent: Array<{
+    id: string;
+    title: string;
+    week: number;
+    author: string;
+    publishedAt: string;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    type: 'account' | 'content' | 'notification' | 'admin';
+    description: string;
+    actor: string;
+    timestamp: string;
+  }>;
+}
+
+export async function fetchDashboardAnalytics(): Promise<DashboardAnalyticsData | null> {
+  try {
+    const res = await apiClient.get('/users/dashboard-stats');
+    if (res?.data?.success && res.data.data) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch dashboard stats from backend:', e);
+  }
+  return null;
+}
+
 export const usersApi = {
   fetchUsers,
   fetchUserById,
   suspendUser,
   reactivateUser,
+  createStaffMember,
+  fetchStaffMembers,
+  fetchDashboardAnalytics,
 };
+

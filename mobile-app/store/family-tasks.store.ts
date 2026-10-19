@@ -42,71 +42,8 @@ interface FamilyTasksState {
 
 const STORAGE_KEY = '@aparaitech_family_tasks_v1';
 
-const INITIAL_FAMILY_TASKS: FamilyTask[] = [
-  {
-    id: 'ft-1',
-    title: 'Book cab & arrange transport for 20-Week Anomaly Scan',
-    assignedTo: 'Partner / Caregiver',
-    assignedBy: 'Mother',
-    category: 'transport',
-    priority: 'high',
-    dueDate: 'Today • Before 10:00 AM',
-    notes: 'Please ensure we arrive 15 minutes early for registration.',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ft-2',
-    title: 'Pick up Ferrous Ascorbate & Calcium tablets from pharmacy',
-    assignedTo: 'Partner / Caregiver',
-    assignedBy: 'Mother',
-    category: 'pharmacy',
-    priority: 'medium',
-    dueDate: 'Tomorrow',
-    notes: 'Prescription is uploaded in the Medical Vault. Check doctor notes for 100mg dosage.',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ft-3',
-    title: 'Print previous blood reports & ultrasound scan for doctor file',
-    assignedTo: 'Partner / Caregiver',
-    assignedBy: 'Mother',
-    category: 'appointment_prep',
-    priority: 'urgent',
-    dueDate: 'Today • 09:30 AM',
-    notes: 'Physical copies of the second trimester CBC panel.',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ft-4',
-    title: 'Buy maternity pregnancy pillow for left-side sleeping support',
-    assignedTo: 'Partner / Caregiver',
-    assignedBy: 'Mother',
-    category: 'shopping',
-    priority: 'medium',
-    dueDate: 'This Weekend',
-    notes: 'U-shaped maternity body pillow to prevent sleeping flat on the back.',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'ft-5',
-    title: 'Assemble baby nursery bedside bassinet & crib safety check',
-    assignedTo: 'Partner / Caregiver',
-    assignedBy: 'Mother',
-    category: 'home_setup',
-    priority: 'low',
-    dueDate: 'Week 28',
-    notes: 'Follow instruction booklet and inspect mattress firmness.',
-    isCompleted: false,
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export const useFamilyTasksStore = create<FamilyTasksState>((set, get) => ({
-  tasks: INITIAL_FAMILY_TASKS,
+  tasks: [],
   isLoading: false,
   filter: 'all',
 
@@ -116,13 +53,12 @@ export const useFamilyTasksStore = create<FamilyTasksState>((set, get) => ({
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           set({ tasks: parsed });
           return;
         }
       }
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_FAMILY_TASKS));
-      set({ tasks: INITIAL_FAMILY_TASKS });
+      set({ tasks: [] });
     } catch (error) {
       console.error('Failed to load family tasks:', error);
     } finally {

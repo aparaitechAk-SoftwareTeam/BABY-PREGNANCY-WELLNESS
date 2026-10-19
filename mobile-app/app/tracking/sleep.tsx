@@ -39,41 +39,8 @@ interface SleepEntry {
   notes?: string;
 }
 
-const DEFAULT_SLEEP_LOGS: SleepEntry[] = [
-  {
-    id: 'sl-1',
-    dateStr: 'Last Night (Oct 14)',
-    week: 24,
-    durationHours: 7.5,
-    quality: 'Restful',
-    awakenings: 1,
-    bedTime: '10:30 PM',
-    wakeTime: '06:00 AM',
-    notes: 'Used full body pillow on left side. Slept deeply.',
-  },
-  {
-    id: 'sl-2',
-    dateStr: 'Oct 13',
-    week: 24,
-    durationHours: 6.0,
-    quality: 'Interrupted',
-    awakenings: 3,
-    bedTime: '11:15 PM',
-    wakeTime: '05:15 AM',
-    notes: 'Bathroom trips & mild round ligament stretching.',
-  },
-  {
-    id: 'sl-3',
-    dateStr: 'Oct 12',
-    week: 23,
-    durationHours: 8.0,
-    quality: 'Restful',
-    awakenings: 1,
-    bedTime: '10:00 PM',
-    wakeTime: '06:00 AM',
-    notes: 'Warm milk before bed and relaxing nursery music.',
-  },
-];
+const DEFAULT_SLEEP_LOGS: SleepEntry[] = [];
+
 
 const STORAGE_KEY = 'aparai_sleep_logs_v1';
 

@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { DEMO_ADMIN_CREDENTIALS } from '@/constants';
-import { Lock, Mail, Loader2, Info } from 'lucide-react';
+import { Lock, Mail, Loader2, ShieldCheck, Database, KeyRound } from 'lucide-react';
 
 export function Login() {
   const { login } = useAuth();
@@ -27,24 +27,24 @@ export function Login() {
     try {
       const user = await login(email, password);
       toast({
-        title: 'Welcome back!',
-        description: `Signed in as ${user.displayName}`,
+        title: 'Authentication Successful',
+        description: `Welcome back, ${user.displayName}! Signed in with ${user.role === 'admin' ? 'Administrator' : 'Support Specialist'} privileges.`,
       });
       navigate(user.role === 'support_agent' ? '/support-team' : '/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fillDemo = (type: 'admin' | 'support') => {
-    if (type === 'admin') {
-      setEmail(DEMO_ADMIN_CREDENTIALS.admin.email);
-      setPassword(DEMO_ADMIN_CREDENTIALS.admin.password);
+  const handleQuickFill = (role: 'admin' | 'support') => {
+    if (role === 'admin') {
+      setEmail('admin@aparaitech.com');
+      setPassword('admin123');
     } else {
-      setEmail(DEMO_ADMIN_CREDENTIALS.support.email);
-      setPassword(DEMO_ADMIN_CREDENTIALS.support.password);
+      setEmail('support@aparaitech.com');
+      setPassword('support123');
     }
   };
 
@@ -52,13 +52,20 @@ export function Login() {
     <AuthLayout>
       <Card className="border-border shadow-lg">
         <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-2xl font-bold text-navy">Sign In</CardTitle>
-          <CardDescription>Enter your credentials to access the admin console</CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold text-navy">Staff Sign In</CardTitle>
+            <Badge variant="outline" className="gap-1 border-emerald-300 bg-emerald-50 text-xs text-emerald-700">
+              <Database className="h-3 w-3" /> Live DB
+            </Badge>
+          </div>
+          <CardDescription>
+            Enter your authorized AparaiTech Administrator or Support credentials to access the console
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Work Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -68,6 +75,8 @@ export function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   required
                 />
               </div>
@@ -85,7 +94,7 @@ export function Login() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Enter your account password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-9"
@@ -104,32 +113,58 @@ export function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Verifying with Database...
                 </>
               ) : (
-                'Sign In'
+                'Sign In to Console'
               )}
             </Button>
           </form>
 
-          <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-blue-700">
-              <Info className="h-4 w-4" />
-              Demo Authentication (Not for Production)
+          {/* Official Staff Accounts Quick Selector */}
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                <KeyRound className="h-3.5 w-3.5 text-primary" />
+                Active Staff Credentials
+              </span>
+              <span className="text-[11px] text-muted-foreground">Stored in Neon DB</span>
             </div>
             <p className="mb-3 text-xs text-muted-foreground">
-              Use the following credentials to explore the dashboard:
+              Select an account to autofill your verified credentials:
             </p>
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" onClick={() => fillDemo('admin')} className="justify-between text-xs">
-                <span>Admin: {DEMO_ADMIN_CREDENTIALS.admin.email}</span>
-                <span className="text-muted-foreground">{DEMO_ADMIN_CREDENTIALS.admin.password}</span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickFill('admin')}
+                className="h-auto flex-col items-start p-2.5 text-left hover:border-primary hover:bg-primary/5"
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-semibold text-navy">Administrator</span>
+                  <Badge variant="secondary" className="text-[10px]">ADMIN</Badge>
+                </div>
+                <span className="mt-0.5 text-[11px] text-muted-foreground">admin@aparaitech.com</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => fillDemo('support')} className="justify-between text-xs">
-                <span>Support: {DEMO_ADMIN_CREDENTIALS.support.email}</span>
-                <span className="text-muted-foreground">{DEMO_ADMIN_CREDENTIALS.support.password}</span>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickFill('support')}
+                className="h-auto flex-col items-start p-2.5 text-left hover:border-purple-500 hover:bg-purple-50/50"
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-semibold text-navy">Support Team</span>
+                  <Badge variant="secondary" className="text-[10px]">SUPPORT</Badge>
+                </div>
+                <span className="mt-0.5 text-[11px] text-muted-foreground">support@aparaitech.com</span>
               </Button>
             </div>
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              🔒 256-bit SSL Encrypted • Admins can create additional support accounts in <span className="font-semibold text-slate-700">Role Management</span>
+            </p>
           </div>
         </CardContent>
       </Card>

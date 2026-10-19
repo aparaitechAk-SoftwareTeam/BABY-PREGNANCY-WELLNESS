@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Query,
@@ -9,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { PregnancyContentService } from './pregnancy-content.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('pregnancy-content')
@@ -53,15 +56,28 @@ export class PregnancyContentController {
     return this.service.listAllContent(query);
   }
 
-  // 5. ADMIN: UPSERT CONTENT
+  // 5. ADMIN ONLY: UPSERT CONTENT (Restricted from Support Agents)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Post('admin/upsert')
   async upsertContent(@Body() dto: any) {
     return this.service.upsertContent(dto);
   }
 
-  // 6. ADMIN: CREATE WEEKLY TASK
+  // 6. ADMIN ONLY: CREATE WEEKLY TASK (Restricted from Support Agents)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Post('admin/tasks/create')
   async createWeeklyTask(@Body() dto: any) {
     return this.service.createWeeklyTask(dto);
   }
+
+  // 7. ADMIN ONLY: DELETE WEEKLY TASK
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Delete('admin/tasks/:id')
+  async deleteWeeklyTask(@Param('id') id: string) {
+    return this.service.deleteWeeklyTask(id);
+  }
 }
+

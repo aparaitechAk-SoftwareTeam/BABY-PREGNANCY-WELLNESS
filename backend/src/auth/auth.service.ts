@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   NotFoundException,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,9 +15,10 @@ import { VerifyOtpDto, ResendOtpDto } from './dto/verify-otp.dto';
 import { SigninDto } from './dto/signin.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -24,6 +26,56 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
   ) {}
+
+  async onModuleInit() {
+    await this.seedDefaultAdminAccounts();
+  }
+
+  private async seedDefaultAdminAccounts() {
+    try {
+      const adminEmail = 'admin@aparaitech.com';
+      const adminExists = await (this.prisma as any).user.findUnique({
+        where: { email: adminEmail },
+      });
+
+      if (!adminExists) {
+        const hashedAdminPassword = await bcrypt.hash('admin123', 10);
+        await (this.prisma as any).user.create({
+          data: {
+            email: adminEmail,
+            password: hashedAdminPassword,
+            name: 'Sarah Chen',
+            role: 'ADMIN',
+            isEmailVerified: true,
+            isProfileCompleted: true,
+          },
+        });
+        this.logger.log('Default Admin account seeded: admin@aparaitech.com');
+      }
+
+      const supportEmail = 'support@aparaitech.com';
+      const supportExists = await (this.prisma as any).user.findUnique({
+        where: { email: supportEmail },
+      });
+
+      if (!supportExists) {
+        const hashedSupportPassword = await bcrypt.hash('support123', 10);
+        await (this.prisma as any).user.create({
+          data: {
+            email: supportEmail,
+            password: hashedSupportPassword,
+            name: 'Maria Garcia',
+            role: 'SUPPORT',
+            isEmailVerified: true,
+            isProfileCompleted: true,
+          },
+        });
+        this.logger.log('Default Support account seeded: support@aparaitech.com');
+      }
+    } catch (err) {
+      this.logger.warn('Could not seed default admin accounts:', err);
+    }
+  }
 
   // Generate cryptographic 6-digit OTP
   private generateOtp(): string {
@@ -344,6 +396,148 @@ export class AuthService {
     return {
       success: true,
       message: 'Password reset successfully! You can now sign in with your new password.',
+    };
+  }
+
+  /**
+   * Validate Caregiver Joining Code (e.g. MOM-XXXX) from live Neon DB
+   */
+  async validateCaregiverCode(code: string) {
+    const cleanCode = (code || '').trim().toUpperCase();
+    if (!cleanCode) {
+      throw new BadRequestException('Pairing code is required.');
+    }
+
+    const pairing = await (this.prisma as any).caregiverPairing.findFirst({
+      where: {
+        pairingCode: cleanCode,
+      },
+      include: {
+        mother: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!pairing) {
+      return {
+        valid: false,
+        message: 'Invalid pairing code. Please ask the mother to generate a fresh code from her profile.',
+      };
+    }
+
+    if (pairing.status === 'REVOKED') {
+      return {
+        valid: false,
+        message: 'This pairing code has been revoked by the mother.',
+      };
+    }
+
+    return {
+      valid: true,
+      message: `Verified! Linking to ${pairing.mother?.name || 'Mother'}.`,
+      motherName: pairing.mother?.name,
+      relationship: pairing.relationship || 'Partner',
+    };
+  }
+
+  /**
+   * Google Social Authentication (Sign In & Sign Up in Neon DB)
+   */
+  async googleAuth(dto: GoogleAuthDto) {
+    const email = dto.email.trim().toLowerCase();
+    if (!email) {
+      throw new BadRequestException('Email address is required for Google authentication.');
+    }
+
+    let user = await (this.prisma as any).user.findUnique({
+      where: { email },
+      include: { profile: true },
+    });
+
+    const targetRole = (dto.role || 'MOTHER').toUpperCase();
+
+    // If new user, create account in Neon DB
+    if (!user) {
+      // If signing up as caregiver with joining code, validate code first
+      let validPairing: any = null;
+      if (targetRole === 'CAREGIVER' && dto.joiningCode) {
+        const cleanCode = dto.joiningCode.trim().toUpperCase();
+        validPairing = await (this.prisma as any).caregiverPairing.findFirst({
+          where: { pairingCode: cleanCode, status: { not: 'REVOKED' } },
+        });
+        if (!validPairing) {
+          throw new BadRequestException('Invalid caregiver joining code. Please check with the mother.');
+        }
+      }
+
+      // Generate a random secure password hash for OAuth accounts
+      const randomPassword = Math.random().toString(36).slice(-10) + '!A9z';
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = await (this.prisma as any).user.create({
+        data: {
+          email,
+          name: dto.name || email.split('@')[0],
+          password: hashedPassword,
+          role: targetRole,
+          isEmailVerified: true, // Google accounts are pre-verified
+          isProfileCompleted: targetRole === 'CAREGIVER' ? true : false,
+        },
+        include: { profile: true },
+      });
+
+      // If valid pairing was found, connect caregiver immediately
+      if (validPairing) {
+        await (this.prisma as any).caregiverPairing.update({
+          where: { id: validPairing.id },
+          data: {
+            caregiverId: user.id,
+            status: 'ACTIVE',
+            pairedAt: new Date(),
+          },
+        });
+      }
+    } else {
+      // Existing user: If caregiver and code provided, ensure linked
+      if (dto.joiningCode && user.role === 'CAREGIVER') {
+        const cleanCode = dto.joiningCode.trim().toUpperCase();
+        const pairing = await (this.prisma as any).caregiverPairing.findFirst({
+          where: { pairingCode: cleanCode, status: { not: 'REVOKED' } },
+        });
+        if (pairing && pairing.motherId !== user.id) {
+          await (this.prisma as any).caregiverPairing.update({
+            where: { id: pairing.id },
+            data: {
+              caregiverId: user.id,
+              status: 'ACTIVE',
+              pairedAt: new Date(),
+            },
+          });
+        }
+      }
+    }
+
+    const token = this.generateToken(user);
+
+    return {
+      success: true,
+      message: 'Google authentication successful.',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isProfileCompleted: user.isProfileCompleted ?? false,
+        setupCompleted: user.isProfileCompleted ?? false,
+        profile: user.profile,
+      },
     };
   }
 

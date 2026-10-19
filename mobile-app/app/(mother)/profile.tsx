@@ -40,7 +40,7 @@ export default function MotherProfile() {
   const pairingCode = useFamilyStore((state) => state.pairingCode);
   const fetchMotherPairingInfo = useFamilyStore((state) => state.fetchMotherPairingInfo);
 
-  const partnerCode = pairingCode || 'MOM-8492';
+  const partnerCode = pairingCode || 'Generating...';
 
   // Scroll to top when screen is focused
   useFocusEffect(

@@ -6,6 +6,7 @@ export interface AdminUser {
   displayName: string;
   role: UserRole;
   avatarUrl?: string;
+  token?: string;
 }
 
 export type AccountStatus = 'active' | 'suspended' | 'pending';
@@ -41,7 +42,27 @@ export interface PregnancyContent {
   reviewedAt?: string;
   body: string;
   summary: string;
+  babySize?: string;
+  babyLength?: string;
+  babyWeight?: string;
+  fetalHighlight?: string;
+  maternalTip?: string;
 }
+
+export interface WeeklyTask {
+  id: string;
+  week: number;
+  title: string;
+  category: string;
+  timeStr?: string;
+  timeOfDay?: string;
+  emoji?: string;
+  description?: string;
+  clinicalRationale?: string;
+  isCompleted?: boolean;
+  createdAt?: string;
+}
+
 
 export interface FAQ {
   id: string;

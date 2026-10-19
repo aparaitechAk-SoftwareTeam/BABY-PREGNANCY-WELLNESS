@@ -5,6 +5,7 @@ import { VerifyOtpDto, ResendOtpDto } from './dto/verify-otp.dto';
 import { SigninDto } from './dto/signin.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleAuthDto, ValidateJoiningCodeDto } from './dto/google-auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -50,5 +51,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  async googleAuth(@Body() dto: GoogleAuthDto) {
+    return this.authService.googleAuth(dto);
+  }
+
+  @Post('validate-caregiver-code')
+  @HttpCode(HttpStatus.OK)
+  async validateCaregiverCode(@Body() dto: ValidateJoiningCodeDto) {
+    return this.authService.validateCaregiverCode(dto.code);
   }
 }

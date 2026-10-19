@@ -6,8 +6,5 @@
     },
     "skipLibCheck": true,
     "moduleResolution": "node"
-  },
-  "references": [
-    { "path": "./backend" }
-  ]
+  }
 }

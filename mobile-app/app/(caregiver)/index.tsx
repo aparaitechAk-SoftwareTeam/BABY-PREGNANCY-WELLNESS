@@ -258,7 +258,7 @@ export default function CaregiverHome() {
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.pairingCardTitle}>Link with Mother's Account</Text>
                 <Text style={styles.pairingCardSubtitle}>
-                  Enter the mother's 6-character invite code (e.g. MOM-8492) to view her live vitals.
+                  Enter the mother's 6-character invite code (e.g. MOM-XXXX) to view her live vitals.
                 </Text>
               </View>
             </View>

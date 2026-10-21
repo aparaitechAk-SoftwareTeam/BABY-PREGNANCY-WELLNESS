@@ -212,6 +212,18 @@ export class FamilySharingService {
 
     const effectiveMotherId = mother.id;
 
+    // Revoke previous unassigned master codes so old code can no longer be used for new signups
+    await (this.prisma as any).caregiverPairing.updateMany({
+      where: {
+        motherId: effectiveMotherId,
+        caregiverId: null,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'REVOKED',
+      },
+    });
+
     let code = this.generateRandomCode();
     let exists = await (this.prisma as any).caregiverPairing.findUnique({
       where: { pairingCode: code },
@@ -279,18 +291,11 @@ export class FamilySharingService {
     }
 
     if (pairing.status === 'REVOKED') {
-      throw new BadRequestException('This pairing code has been revoked by the mother.');
+      throw new BadRequestException('This invitation code has expired. The mother has generated a new code. Please ask her for the new code.');
     }
 
     if (pairing.motherId === caregiverId) {
       throw new BadRequestException('You cannot pair with yourself as caregiver.');
-    }
-
-    // Verify single-use: An invitation code cannot be reused once claimed by a caregiver
-    if (pairing.caregiverId && pairing.caregiverId !== caregiverId) {
-      throw new BadRequestException(
-        'This invitation code has already been used by another caregiver. Each code is single-use. Please ask the mother to generate a new invitation code.',
-      );
     }
 
     // Check if this caregiver is already linked (ACTIVE) or already requested (PENDING)
@@ -336,13 +341,22 @@ export class FamilySharingService {
       };
     }
 
-    // Link caregiver to this pairing record in PENDING status
-    const updated = await (this.prisma as any).caregiverPairing.update({
-      where: { id: pairing.id },
+    // Allow multiple family members to join using this mother's active code!
+    // Create a distinct pairing record for this caregiver so the master code remains active for other family members.
+    const caregiverPairingCode = `${cleanCode}-${caregiverId.substring(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+    const updated = await (this.prisma as any).caregiverPairing.create({
       data: {
+        motherId: pairing.motherId,
         caregiverId,
+        pairingCode: caregiverPairingCode,
         status: 'PENDING',
         relationship: relationship || pairing.relationship || 'Partner / Caregiver',
+        permissions: {
+          milestones: true,
+          appointments: true,
+          kicks: true,
+          emergency: true,
+        },
       },
       include: {
         mother: {

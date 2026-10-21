@@ -33,6 +33,7 @@ import {
   X,
   AlertCircle,
   KeyRound,
+  RotateCcw,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useFamilyStore } from '../../store/family.store';
@@ -55,6 +56,7 @@ export default function PartnerSyncScreen() {
 
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isRefreshingCode, setIsRefreshingCode] = useState(false);
 
   const inviteCode =
     pairingCode ||
@@ -75,6 +77,24 @@ export default function PartnerSyncScreen() {
     Alert.alert('Invite Code Copied! 📋', `Share code ${inviteCode} with your partner to connect their Caregiver app.`);
   };
 
+  /**
+   * Refresh simply re-fetches the current active database code and pending requests without generating anything new
+   */
+  const handleRefreshCode = async () => {
+    setIsRefreshingCode(true);
+    try {
+      await fetchMotherPairingInfo();
+      Alert.alert('Code Synced 🔄', 'Synced with database! Your current invitation code is ready for family members.');
+    } catch {
+      Alert.alert('Error', 'Could not refresh. Please check network connection.');
+    } finally {
+      setIsRefreshingCode(false);
+    }
+  };
+
+  /**
+   * Explicitly generates a brand new code, updating the database and expiring the old code
+   */
   const handleRegenerateCode = async () => {
     setIsRegenerating(true);
     try {
@@ -199,23 +219,34 @@ export default function PartnerSyncScreen() {
               <Text style={styles.codeNumber}>{inviteCode}</Text>
             </View>
 
-            <TouchableOpacity
-              style={[styles.copyBtn, copied && styles.copyBtnDone]}
-              onPress={handleCopyCode}
-              activeOpacity={0.8}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 size={16} color="#FFFFFF" />
-                  <Text style={styles.copyBtnText}>Copied</Text>
-                </>
-              ) : (
-                <>
-                  <Copy size={16} color="#FFFFFF" />
-                  <Text style={styles.copyBtnText}>Copy</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={styles.codeRightActions}>
+              <TouchableOpacity
+                style={styles.refreshSyncBtn}
+                onPress={handleRefreshCode}
+                disabled={isRefreshingCode || isLoadingMotherCode}
+                activeOpacity={0.7}
+              >
+                <RotateCcw size={15} color="#059669" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.copyBtn, copied && styles.copyBtnDone]}
+                onPress={handleCopyCode}
+                activeOpacity={0.8}
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle2 size={16} color="#FFFFFF" />
+                    <Text style={styles.copyBtnText}>Copied</Text>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} color="#FFFFFF" />
+                    <Text style={styles.copyBtnText}>Copy</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Dedicated Generate New Code Button */}
@@ -231,7 +262,7 @@ export default function PartnerSyncScreen() {
             </Text>
           </TouchableOpacity>
           <Text style={styles.codeNoteText}>
-            Each invitation code is single-use. If you need to invite an additional partner or caregiver, tap Generate New Code.
+            This active code can be used by multiple family members (partner, mother, sister, etc.). To change or invalidate this code, tap Generate New Code.
           </Text>
 
           {/* Share Action Buttons */}
@@ -562,6 +593,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: 2,
+  },
+  codeRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshSyncBtn: {
+    padding: 9,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   generateBtn: {
     flexDirection: 'row',

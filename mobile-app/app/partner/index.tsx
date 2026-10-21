@@ -32,7 +32,7 @@ import {
   Check,
   X,
   AlertCircle,
-  RefreshCw,
+  KeyRound,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useFamilyStore } from '../../store/family.store';
@@ -194,44 +194,45 @@ export default function PartnerSyncScreen() {
 
           {/* Code Box */}
           <View style={styles.codeContainer}>
-            <TouchableOpacity
-              style={styles.codeTextCol}
-              onPress={!pairingCode ? handleRegenerateCode : undefined}
-              activeOpacity={!pairingCode ? 0.7 : 1}
-            >
+            <View style={styles.codeTextCol}>
               <Text style={styles.codeLabel}>YOUR 6-DIGIT PAIRING CODE</Text>
               <Text style={styles.codeNumber}>{inviteCode}</Text>
-            </TouchableOpacity>
-
-            <View style={styles.codeActions}>
-              <TouchableOpacity
-                style={styles.refreshBtn}
-                onPress={handleRegenerateCode}
-                disabled={isRegenerating || isLoadingMotherCode}
-                activeOpacity={0.7}
-              >
-                <RefreshCw size={15} color="#059669" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.copyBtn, copied && styles.copyBtnDone]}
-                onPress={handleCopyCode}
-                activeOpacity={0.8}
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle2 size={16} color="#FFFFFF" />
-                    <Text style={styles.copyBtnText}>Copied</Text>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={16} color="#FFFFFF" />
-                    <Text style={styles.copyBtnText}>Copy</Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={[styles.copyBtn, copied && styles.copyBtnDone]}
+              onPress={handleCopyCode}
+              activeOpacity={0.8}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle2 size={16} color="#FFFFFF" />
+                  <Text style={styles.copyBtnText}>Copied</Text>
+                </>
+              ) : (
+                <>
+                  <Copy size={16} color="#FFFFFF" />
+                  <Text style={styles.copyBtnText}>Copy</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
+
+          {/* Dedicated Generate New Code Button */}
+          <TouchableOpacity
+            style={styles.generateBtn}
+            onPress={handleRegenerateCode}
+            disabled={isRegenerating || isLoadingMotherCode}
+            activeOpacity={0.85}
+          >
+            <KeyRound size={17} color="#059669" />
+            <Text style={styles.generateBtnText}>
+              {isRegenerating ? 'Generating New Code...' : 'Generate New Code'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.codeNoteText}>
+            Each invitation code is single-use. If you need to invite an additional partner or caregiver, tap Generate New Code.
+          </Text>
 
           {/* Share Action Buttons */}
           <View style={styles.shareRow}>
@@ -562,19 +563,29 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     letterSpacing: 2,
   },
-  codeActions: {
+  generateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  refreshBtn: {
-    padding: 9,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#6EE7B7',
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  generateBtnText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  codeNoteText: {
+    fontSize: 11.5,
+    color: '#64748B',
+    lineHeight: 16,
+    marginBottom: 14,
+    paddingHorizontal: 2,
   },
   copyBtn: {
     flexDirection: 'row',

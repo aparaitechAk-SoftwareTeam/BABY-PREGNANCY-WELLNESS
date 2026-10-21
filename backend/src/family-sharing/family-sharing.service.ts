@@ -286,6 +286,13 @@ export class FamilySharingService {
       throw new BadRequestException('You cannot pair with yourself as caregiver.');
     }
 
+    // Verify single-use: An invitation code cannot be reused once claimed by a caregiver
+    if (pairing.caregiverId && pairing.caregiverId !== caregiverId) {
+      throw new BadRequestException(
+        'This invitation code has already been used by another caregiver. Each code is single-use. Please ask the mother to generate a new invitation code.',
+      );
+    }
+
     // Check if this caregiver is already linked (ACTIVE) or already requested (PENDING)
     const existingPairing = await (this.prisma as any).caregiverPairing.findFirst({
       where: {

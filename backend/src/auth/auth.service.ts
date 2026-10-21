@@ -138,8 +138,8 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    // If mother, create profile with safe maternal baselines
-    if (user.role === Role.MOTHER) {
+    // If mother, create profile with safe maternal baselines & immediately store 6-digit pairing code
+    if (user.role === Role.MOTHER || user.role === 'MOTHER') {
       const defaultDueDate = new Date(Date.now() + 140 * 24 * 60 * 60 * 1000); // ~20 weeks out
       await (this.prisma as any).pregnancyProfile.create({
         data: {
@@ -156,6 +156,22 @@ export class AuthService implements OnModuleInit {
           motherAge: 28,
           calculationMethod: 'EDD',
           pregnancyType: 'SINGLE',
+        },
+      });
+
+      // Initialize unique 6-digit pairing code in DB immediately
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      await (this.prisma as any).caregiverPairing.create({
+        data: {
+          motherId: user.id,
+          pairingCode: code,
+          status: 'PENDING',
+          permissions: {
+            milestones: true,
+            appointments: true,
+            kicks: true,
+            emergency: true,
+          },
         },
       });
     }
@@ -514,6 +530,43 @@ export class AuthService implements OnModuleInit {
         },
         include: { profile: true },
       });
+
+      // If new user is a mother, initialize profile & unique 6-digit pairing code in DB immediately
+      if (targetRole === 'MOTHER' || targetRole === Role.MOTHER) {
+        const defaultDueDate = new Date(Date.now() + 140 * 24 * 60 * 60 * 1000);
+        await (this.prisma as any).pregnancyProfile.create({
+          data: {
+            userId: user.id,
+            currentWeek: 20,
+            currentDay: 0,
+            trimester: 2,
+            daysRemaining: 140,
+            dueDate: defaultDueDate,
+            bloodGroup: 'O+',
+            prePregnancyWeight: 60.0,
+            currentWeight: 65.0,
+            height: 165.0,
+            motherAge: 28,
+            calculationMethod: 'EDD',
+            pregnancyType: 'SINGLE',
+          },
+        });
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        await (this.prisma as any).caregiverPairing.create({
+          data: {
+            motherId: user.id,
+            pairingCode: code,
+            status: 'PENDING',
+            permissions: {
+              milestones: true,
+              appointments: true,
+              kicks: true,
+              emergency: true,
+            },
+          },
+        });
+      }
 
       // Send the welcome credentials email so user can also log in via Email & Password
       try {

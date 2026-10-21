@@ -16,8 +16,15 @@ export class UsersService {
     if (query.search) {
       const q = query.search.trim();
       where.OR = [
+        { id: { contains: q, mode: 'insensitive' } },
         { name: { contains: q, mode: 'insensitive' } },
         { email: { contains: q, mode: 'insensitive' } },
+        { profile: { emergencyContactName: { contains: q, mode: 'insensitive' } } },
+        { profile: { emergencyContactPhone: { contains: q, mode: 'insensitive' } } },
+        { profile: { doctorName: { contains: q, mode: 'insensitive' } } },
+        { profile: { doctorPhone: { contains: q, mode: 'insensitive' } } },
+        { pairingsAsMother: { some: { pairingCode: { contains: q, mode: 'insensitive' } } } },
+        { pairingsAsCaregiver: { some: { pairingCode: { contains: q, mode: 'insensitive' } } } },
       ];
     }
 
@@ -34,15 +41,16 @@ export class UsersService {
         orderBy: { createdAt: 'desc' },
         include: {
           profile: true,
+          pairingsAsMother: { take: 1, orderBy: { createdAt: 'desc' } },
         },
       }),
     ]);
 
     return {
       success: true,
-      data: users.map((u) => ({
+      data: users.map((u: any) => ({
         id: u.id,
-        displayName: u.name,
+        displayName: u.name || (u.email ? u.email.split('@')[0] : 'User'),
         email: u.email,
         role: u.role,
         isEmailVerified: u.isEmailVerified,
@@ -51,6 +59,7 @@ export class UsersService {
         lastActiveDate: u.updatedAt.toISOString(),
         accountStatus: 'active',
         subscriptionStatus: 'free',
+        pairingCode: u.pairingsAsMother?.[0]?.pairingCode || null,
         weekOfPregnancy: u.profile?.currentWeek || 1,
         dueDate: u.profile?.dueDate ? u.profile.dueDate.toISOString() : null,
         bloodGroup: u.profile?.bloodGroup || null,

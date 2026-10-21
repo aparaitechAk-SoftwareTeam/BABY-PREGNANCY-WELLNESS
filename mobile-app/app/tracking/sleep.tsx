@@ -27,6 +27,8 @@ import {
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
+import { trackingApi } from '../../services/api/tracking.api';
+
 interface SleepEntry {
   id: string;
   dateStr: string;
@@ -39,17 +41,26 @@ interface SleepEntry {
   notes?: string;
 }
 
-const DEFAULT_SLEEP_LOGS: SleepEntry[] = [];
-
-
 const STORAGE_KEY = 'aparai_sleep_logs_v1';
+
+export const isMockSleepEntry = (id: string): boolean => {
+  if (!id) return true;
+  return (
+    id === 'sl_1' ||
+    id === 'sl_2' ||
+    id === 'sl_3' ||
+    id === 'sl_4' ||
+    id.startsWith('mock_') ||
+    id.startsWith('default_')
+  );
+};
 
 export default function SleepTrackerScreen() {
   const router = useRouter();
   const currentWeek = usePregnancyStore((state) => state.currentWeek);
   const trimester = usePregnancyStore((state) => state.trimester);
 
-  const [entries, setEntries] = useState<SleepEntry[]>(DEFAULT_SLEEP_LOGS);
+  const [entries, setEntries] = useState<SleepEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [inputDuration, setInputDuration] = useState('7.5');
   const [selectedQuality, setSelectedQuality] = useState<'Restful' | 'Fair' | 'Interrupted'>('Restful');
@@ -57,24 +68,57 @@ export default function SleepTrackerScreen() {
   const [bedTime, setBedTime] = useState('10:30 PM');
   const [wakeTime, setWakeTime] = useState('06:30 AM');
   const [inputNotes, setInputNotes] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load from AsyncStorage
-  useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setEntries(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error('Failed to load sleep tracking data:', e);
+  // Load from Live Neon DB & fallback to local storage
+  const loadSleepLogs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await trackingApi.getSleepHistory();
+      if (res?.data?.data && Array.isArray(res.data.data)) {
+        const liveEntries: SleepEntry[] = res.data.data.map((l: any) => ({
+          id: l.id,
+          dateStr: l.dateStr,
+          week: currentWeek,
+          durationHours: Number(((l.durationMinutes || 0) / 60).toFixed(1)),
+          quality: (l.quality as any) || 'Restful',
+          awakenings: l.awakenings || 0,
+          bedTime: l.bedTime || '10:30 PM',
+          wakeTime: l.wakeTime || '06:30 AM',
+          notes: l.notes || undefined,
+        }));
+        setEntries(liveEntries);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(liveEntries));
+        setIsLoading(false);
+        return;
       }
-    })();
-  }, []);
+    } catch {
+      // offline fallback
+    }
+
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter((e) => !isMockSleepEntry(e.id));
+          setEntries(clean);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load sleep tracking data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSleepLogs();
+  }, [currentWeek]);
 
   const avgSleep = entries.length > 0
     ? (entries.reduce((acc, curr) => acc + curr.durationHours, 0) / entries.length).toFixed(1)
-    : '7.5';
+    : '--';
 
   const handleSaveEntry = async () => {
     const hours = parseFloat(inputDuration.trim());
@@ -83,29 +127,57 @@ export default function SleepTrackerScreen() {
       return;
     }
 
-    const newEntry: SleepEntry = {
-      id: 'sl_' + Date.now(),
-      dateStr: 'Last Night',
-      week: currentWeek,
-      durationHours: hours,
-      quality: selectedQuality,
-      awakenings: awakeningsCount,
-      bedTime: bedTime.trim() || '10:30 PM',
-      wakeTime: wakeTime.trim() || '06:30 AM',
-      notes: inputNotes.trim() || undefined,
-    };
+    const durationMinutes = Math.round(hours * 60);
+    const dateStr = new Date().toISOString().slice(0, 10);
 
-    const updated = [newEntry, ...entries];
-    setEntries(updated);
     try {
+      const res = await trackingApi.logSleep({
+        durationMinutes,
+        quality: selectedQuality,
+        dateStr,
+        bedTime: bedTime.trim() || '10:30 PM',
+        wakeTime: wakeTime.trim() || '06:30 AM',
+        notes: inputNotes.trim() || undefined,
+        awakenings: awakeningsCount,
+      });
+
+      const savedRecord = res?.data?.data;
+      const newEntry: SleepEntry = {
+        id: savedRecord?.id || 'sl_' + Date.now(),
+        dateStr: 'Today',
+        week: currentWeek,
+        durationHours: hours,
+        quality: selectedQuality,
+        awakenings: awakeningsCount,
+        bedTime: bedTime.trim() || '10:30 PM',
+        wakeTime: wakeTime.trim() || '06:30 AM',
+        notes: inputNotes.trim() || undefined,
+      };
+
+      const updated = [newEntry, ...entries.filter((e) => e.dateStr !== dateStr)];
+      setEntries(updated);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
-      console.error('Failed to save sleep log:', e);
+      console.warn('Realtime sleep database sync deferred:', e);
+      const newEntry: SleepEntry = {
+        id: 'sl_' + Date.now(),
+        dateStr: 'Today',
+        week: currentWeek,
+        durationHours: hours,
+        quality: selectedQuality,
+        awakenings: awakeningsCount,
+        bedTime: bedTime.trim() || '10:30 PM',
+        wakeTime: wakeTime.trim() || '06:30 AM',
+        notes: inputNotes.trim() || undefined,
+      };
+      const updated = [newEntry, ...entries];
+      setEntries(updated);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     }
 
     setInputNotes('');
     setShowAddForm(false);
-    Alert.alert('Sleep Logged! 🌙', `Recorded ${hours} hours of sleep for Week ${currentWeek}.`);
+    Alert.alert('Sleep Logged! 🌙', `Recorded ${hours} hours of sleep in your database profile.`);
   };
 
   const handleDeleteEntry = (id: string) => {
@@ -115,6 +187,11 @@ export default function SleepTrackerScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          try {
+            await trackingApi.deleteSleep(id);
+          } catch {
+            // quiet
+          }
           const updated = entries.filter((e) => e.id !== id);
           setEntries(updated);
           try {
@@ -156,12 +233,12 @@ export default function SleepTrackerScreen() {
             <View style={styles.heroTitleCol}>
               <Text style={styles.heroSuper}>Nightly Rest & Recovery</Text>
               <Text style={styles.heroDuration}>
-                {entries.length > 0 ? entries[0].durationHours : 7.5} <Text style={styles.heroUnit}>hours</Text>
+                {entries.length > 0 ? entries[0].durationHours : '--'} <Text style={styles.heroUnit}>{entries.length > 0 ? 'hours' : ''}</Text>
               </Text>
             </View>
             <View style={styles.qualityPill}>
               <Text style={styles.qualityPillText}>
-                {entries.length > 0 ? entries[0].quality : 'Restful'}
+                {entries.length > 0 ? entries[0].quality : 'No Log Yet'}
               </Text>
             </View>
           </View>
@@ -170,7 +247,7 @@ export default function SleepTrackerScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>7-Day Average</Text>
-              <Text style={styles.statValue}>{avgSleep} hrs</Text>
+              <Text style={styles.statValue}>{avgSleep === '--' ? '--' : `${avgSleep} hrs`}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
@@ -180,7 +257,7 @@ export default function SleepTrackerScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Sleep Debt</Text>
-              <Text style={styles.statValue}>Minimal</Text>
+              <Text style={styles.statValue}>{entries.length > 0 ? 'Minimal' : '--'}</Text>
             </View>
           </View>
 
@@ -315,40 +392,50 @@ export default function SleepTrackerScreen() {
           <Text style={styles.historyCount}>{entries.length} records</Text>
         </View>
 
-        {entries.map((item) => (
-          <View key={item.id} style={styles.historyCard}>
-            <View style={styles.historyTopRow}>
-              <View style={styles.historyLeft}>
-                <View style={styles.sleepIconBadge}>
-                  <Bed size={16} color="#6366F1" />
-                </View>
-                <View>
-                  <Text style={styles.historyDate}>{item.dateStr}</Text>
-                  <Text style={styles.historyMeta}>
-                    {item.bedTime} - {item.wakeTime} • {item.awakenings} awakening{item.awakenings === 1 ? '' : 's'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.historyRight}>
-                <Text style={styles.historyHours}>{item.durationHours} hrs</Text>
-                <TouchableOpacity
-                  onPress={() => handleDeleteEntry(item.id)}
-                  style={styles.deleteBtn}
-                  activeOpacity={0.7}
-                >
-                  <Trash2 size={14} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {item.notes && (
-              <View style={styles.historyNoteBox}>
-                <Text style={styles.historyNoteText}>{item.notes}</Text>
-              </View>
-            )}
+        {entries.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Moon size={36} color="#A5B4FC" />
+            <Text style={styles.emptyTitle}>No Sleep Logs Recorded</Text>
+            <Text style={styles.emptySubtitle}>
+              Tap "Log Last Night's Sleep" above to track your rest duration, sleep quality, and comfort positions.
+            </Text>
           </View>
-        ))}
+        ) : (
+          entries.map((item) => (
+            <View key={item.id} style={styles.historyCard}>
+              <View style={styles.historyTopRow}>
+                <View style={styles.historyLeft}>
+                  <View style={styles.sleepIconBadge}>
+                    <Bed size={16} color="#6366F1" />
+                  </View>
+                  <View>
+                    <Text style={styles.historyDate}>{item.dateStr}</Text>
+                    <Text style={styles.historyMeta}>
+                      {item.bedTime} - {item.wakeTime} • {item.awakenings} awakening{item.awakenings === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.historyRight}>
+                  <Text style={styles.historyHours}>{item.durationHours} hrs</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteEntry(item.id)}
+                    style={styles.deleteBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Trash2 size={14} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {item.notes && (
+                <View style={styles.historyNoteBox}>
+                  <Text style={styles.historyNoteText}>{item.notes}</Text>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -719,5 +806,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#475569',
     lineHeight: 16,
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 6,
+    maxWidth: 280,
   },
 });

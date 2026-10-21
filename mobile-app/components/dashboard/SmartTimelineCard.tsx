@@ -23,6 +23,12 @@ export function SmartTimelineCard() {
   const pendingHabits = routineTasks.filter((t) => !t.isCompleted);
 
   const timelineItems = useTimelineStore((state) => state.items);
+  const fetchTimeline = useTimelineStore((state) => state.fetchTimeline);
+
+  React.useEffect(() => {
+    fetchTimeline(currentWeek);
+  }, [currentWeek, fetchTimeline]);
+
   // Find the next upcoming clinical event or appointment
   const nextEvent =
     timelineItems.find((item) => item.status === 'today' && !item.isCompleted) ||
@@ -79,7 +85,18 @@ export function SmartTimelineCard() {
             </View>
           ) : null}
         </TouchableOpacity>
-      ) : null}
+      ) : (
+        <TouchableOpacity
+          style={styles.noEventBox}
+          onPress={() => router.push('/timeline')}
+          activeOpacity={0.8}
+        >
+          <Sparkles size={16} color="#059669" />
+          <Text style={styles.noEventText}>
+            No urgent clinical visits scheduled. Tap to view your complete week-by-week Care Timeline.
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Incomplete Daily Logs / Routine Status */}
       <View style={styles.dailyHabitsStrip}>
@@ -294,5 +311,23 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '700',
     color: '#0284C7',
+  },
+  noEventBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+  },
+  noEventText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#166534',
+    lineHeight: 16,
+    fontWeight: '500',
   },
 });

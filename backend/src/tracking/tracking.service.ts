@@ -248,6 +248,10 @@ export class TrackingService {
     const dateStr = dto.dateStr || new Date().toISOString().slice(0, 10);
     const durationMinutes = Number(dto.durationMinutes) || 0;
     const quality = dto.quality || 'Restful';
+    const bedTime = dto.bedTime || null;
+    const wakeTime = dto.wakeTime || null;
+    const notes = dto.notes || null;
+    const awakenings = dto.awakenings !== undefined ? Number(dto.awakenings) : 0;
 
     const record = await (this.prisma as any).sleepLog.upsert({
       where: {
@@ -256,12 +260,20 @@ export class TrackingService {
       update: {
         durationMinutes,
         quality,
+        bedTime,
+        wakeTime,
+        notes,
+        awakenings,
       },
       create: {
         userId,
         dateStr,
         durationMinutes,
         quality,
+        bedTime,
+        wakeTime,
+        notes,
+        awakenings,
       },
     });
 
@@ -289,6 +301,24 @@ export class TrackingService {
         dateStr,
       },
     };
+  }
+
+  async getSleepHistory(userIdOrIdentifier: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    const records = await (this.prisma as any).sleepLog.findMany({
+      where: { userId },
+      orderBy: { dateStr: 'desc' },
+      take: 30,
+    });
+    return { success: true, data: records };
+  }
+
+  async deleteSleepLog(userIdOrIdentifier: string, id: string) {
+    const userId = await this.resolveUserId(userIdOrIdentifier);
+    await (this.prisma as any).sleepLog.deleteMany({
+      where: { id, userId },
+    });
+    return { success: true, message: 'Sleep log deleted successfully' };
   }
 
   // 7. COMBINED TODAY'S DASHBOARD SUMMARY

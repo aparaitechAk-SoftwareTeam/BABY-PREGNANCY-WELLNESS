@@ -12,8 +12,17 @@ export const trackingApi = {
 
   // Sleep
   getTodaySleep: () => apiClient.get('/tracking/sleep/today'),
-  logSleep: (data: { durationMinutes: number; quality?: string; dateStr?: string }) =>
-    apiClient.post('/tracking/sleep', data),
+  getSleepHistory: () => apiClient.get('/tracking/sleep/history'),
+  logSleep: (data: {
+    durationMinutes: number;
+    quality?: string;
+    dateStr?: string;
+    bedTime?: string;
+    wakeTime?: string;
+    notes?: string;
+    awakenings?: number;
+  }) => apiClient.post('/tracking/sleep', data),
+  deleteSleep: (id: string) => apiClient.delete(`/tracking/sleep/${id}`),
 
   // Kick movement tracking
   logMovement: (data: any) => apiClient.post('/tracking/kicks', data),

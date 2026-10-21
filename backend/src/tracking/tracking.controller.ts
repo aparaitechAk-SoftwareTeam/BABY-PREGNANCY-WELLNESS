@@ -135,6 +135,20 @@ export class TrackingController {
     return this.trackingService.getTodaySleep(userIdOrIdentifier);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('sleep/history')
+  async getSleepHistory(@CurrentUser() user: any) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.getSleepHistory(userIdOrIdentifier);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sleep/:id')
+  async deleteSleepLog(@CurrentUser() user: any, @Param('id') id: string) {
+    const userIdOrIdentifier = user?.sub || user?.id;
+    return this.trackingService.deleteSleepLog(userIdOrIdentifier, id);
+  }
+
   // 7. TODAY SUMMARY
   @UseGuards(JwtAuthGuard)
   @Get('today-summary')

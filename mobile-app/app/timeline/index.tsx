@@ -44,16 +44,23 @@ export default function SmartTimelineScreen() {
     setFilter,
     setSearchQuery,
     toggleItemCompleted,
+    fetchTimeline,
+    isLoading,
   } = useTimelineStore();
 
+  const items = useTimelineStore((state) => state.items);
   const filteredItems = useTimelineStore((state) => state.getFilteredItems(currentWeek));
 
+  React.useEffect(() => {
+    fetchTimeline(currentWeek);
+  }, [currentWeek, fetchTimeline]);
+
   const filterTabs: { key: typeof filter; label: string; count: number }[] = [
-    { key: 'all', label: 'All', count: 10 },
-    { key: 'appointments', label: 'Visits', count: 1 },
-    { key: 'tests', label: 'Tests & Vaccines', count: 4 },
-    { key: 'milestones', label: 'Milestones', count: 4 },
-    { key: 'routine', label: 'Habits', count: 1 },
+    { key: 'all', label: 'All', count: items.length },
+    { key: 'appointments', label: 'Visits', count: items.filter((i) => i.type === 'appointment').length },
+    { key: 'tests', label: 'Tests & Scans', count: items.filter((i) => i.type === 'clinical_test' || i.type === 'vaccination').length },
+    { key: 'milestones', label: 'Milestones', count: items.filter((i) => i.type === 'milestone').length },
+    { key: 'routine', label: 'Habits', count: items.filter((i) => i.type === 'routine_habit').length },
   ];
 
   const getItemIcon = (type: TimelineItemType) => {
@@ -184,11 +191,20 @@ export default function SmartTimelineScreen() {
             Chronological Care Schedule ({filteredItems.length} events)
           </Text>
 
-          <View style={styles.timelineContainer}>
-            {/* Continuous Vertical Connecting Line */}
-            <View style={styles.verticalLine} />
+          {filteredItems.length === 0 ? (
+            <View style={styles.emptyTimelineCard}>
+              <Calendar size={36} color="#94A3B8" />
+              <Text style={styles.emptyTimelineTitle}>No Timeline Events Found</Text>
+              <Text style={styles.emptyTimelineSubtitle}>
+                Your clinic appointments, developmental milestones, diagnostic tests, and daily routine tasks will appear here in real time.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.timelineContainer}>
+              {/* Continuous Vertical Connecting Line */}
+              <View style={styles.verticalLine} />
 
-            {filteredItems.map((item, index) => {
+              {filteredItems.map((item, index) => {
               const isPastOrToday = item.targetWeek <= (currentWeek || 20);
 
               return (
@@ -302,7 +318,8 @@ export default function SmartTimelineScreen() {
               );
             })}
           </View>
-        </View>
+        )}
+      </View>
 
         {/* Quick Launchers Strip */}
         <View style={styles.quickLaunchers}>
@@ -685,5 +702,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#94A3B8',
     fontWeight: '600',
+  },
+  emptyTimelineCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  emptyTimelineTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 12,
+  },
+  emptyTimelineSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 6,
+    maxWidth: 290,
   },
 });

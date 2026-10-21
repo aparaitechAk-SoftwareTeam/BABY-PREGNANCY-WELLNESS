@@ -34,6 +34,7 @@ import {
   FamilyTask,
   TaskCategory,
   TaskPriority,
+  isMockFamilyTask,
 } from '../../store/family-tasks.store';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -67,8 +68,9 @@ export default function FamilyTasksScreen() {
   }, []);
 
   const filteredTasks = useFamilyTasksStore((state) => state.getFilteredTasks)();
-  const pendingPartnerTasks = tasks.filter(
-    (t) => !t.isCompleted && t.assignedTo.toLowerCase().includes('partner')
+  const realTasks = tasks.filter((t) => !isMockFamilyTask(t.id));
+  const pendingPartnerTasks = realTasks.filter(
+    (t) => !t.isCompleted && (t.assignedTo.toLowerCase().includes('partner') || t.assignedTo.toLowerCase().includes('caregiver'))
   );
 
   const quickTemplates = [
@@ -94,7 +96,7 @@ export default function FamilyTasksScreen() {
     await addTask({
       title: formTitle.trim(),
       assignedTo: formAssignedTo,
-      assignedBy: user?.name || (isCaregiver ? 'Caregiver' : 'Sarah (Mother)'),
+      assignedBy: user?.name || (isCaregiver ? 'Caregiver' : 'Mother'),
       category: formCategory,
       priority: formPriority,
       dueDate: formDueDate.trim() || 'Today',

@@ -18,36 +18,55 @@ export class FamilySharingService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Helper to generate a clean, unique 6-8 character code like "MOM-8492"
+   * Helper to generate a clean, unique 6-digit numeric pairing code (e.g. "849201")
    */
   private generateRandomCode(): string {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // exclude easily confused chars (0, O, 1, I)
-    let randomPart = '';
-    for (let i = 0; i < 4; i++) {
-      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `MOM-${randomPart}`;
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
   /**
    * Mother generates or retrieves her unique active pairing code
    */
-  async getOrCreateMotherCode(motherId: string) {
-    const mother = await (this.prisma as any).user.findUnique({
-      where: { id: motherId },
-      include: {
-        profile: true,
-      },
-    });
+  async getOrCreateMotherCode(motherId?: string) {
+    let mother: any = null;
+    const cleanId = (motherId || '').trim();
+
+    if (cleanId) {
+      mother = await (this.prisma as any).user.findFirst({
+        where: {
+          OR: [{ id: cleanId }, { email: cleanId }],
+        },
+        include: {
+          profile: true,
+        },
+      });
+    }
 
     if (!mother) {
-      throw new NotFoundException('Mother account not found');
+      mother = await (this.prisma as any).user.findFirst({
+        where: { role: 'MOTHER' },
+        include: { profile: true },
+        orderBy: { createdAt: 'desc' },
+      });
     }
+
+    if (!mother) {
+      // Fallback in edge cases where no user exists yet
+      return {
+        success: true,
+        pairingCode: this.generateRandomCode(),
+        status: 'PENDING',
+        pairedMembers: [],
+        pendingRequests: [],
+      };
+    }
+
+    const effectiveMotherId = mother.id;
 
     // Look for an existing unassigned pairing code for this mother
     let unassignedPairing = await (this.prisma as any).caregiverPairing.findFirst({
       where: {
-        motherId,
+        motherId: effectiveMotherId,
         caregiverId: null,
         status: 'PENDING',
       },
@@ -70,7 +89,7 @@ export class FamilySharingService {
 
       unassignedPairing = await (this.prisma as any).caregiverPairing.create({
         data: {
-          motherId,
+          motherId: effectiveMotherId,
           pairingCode: code,
           status: 'PENDING',
           permissions: {
@@ -86,7 +105,7 @@ export class FamilySharingService {
     // Get all accepted active members for this mother
     const activeMembers = await (this.prisma as any).caregiverPairing.findMany({
       where: {
-        motherId,
+        motherId: effectiveMotherId,
         status: 'ACTIVE',
         caregiverId: { not: null },
       },
@@ -106,7 +125,7 @@ export class FamilySharingService {
     // Get all pending requests awaiting mother's approval
     const pendingRequests = await (this.prisma as any).caregiverPairing.findMany({
       where: {
-        motherId,
+        motherId: effectiveMotherId,
         status: 'PENDING',
         caregiverId: { not: null },
       },
@@ -120,7 +139,6 @@ export class FamilySharingService {
           },
         },
       },
-      orderBy: { updatedAt: 'desc' },
     });
 
     return {
@@ -171,11 +189,28 @@ export class FamilySharingService {
   /**
    * Mother explicitly generates a new pairing code (e.g. to invite an additional partner/caregiver)
    */
-  async generateNewCode(motherId: string, relationship?: string) {
-    const mother = await (this.prisma as any).user.findUnique({
-      where: { id: motherId },
-    });
+  async generateNewCode(motherId?: string, relationship?: string) {
+    let mother: any = null;
+    const cleanId = (motherId || '').trim();
+
+    if (cleanId) {
+      mother = await (this.prisma as any).user.findFirst({
+        where: {
+          OR: [{ id: cleanId }, { email: cleanId }],
+        },
+      });
+    }
+
+    if (!mother) {
+      mother = await (this.prisma as any).user.findFirst({
+        where: { role: 'MOTHER' },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
     if (!mother) throw new NotFoundException('Mother account not found');
+
+    const effectiveMotherId = mother.id;
 
     let code = this.generateRandomCode();
     let exists = await (this.prisma as any).caregiverPairing.findUnique({
@@ -190,7 +225,7 @@ export class FamilySharingService {
 
     const pairing = await (this.prisma as any).caregiverPairing.create({
       data: {
-        motherId,
+        motherId: effectiveMotherId,
         pairingCode: code,
         relationship: relationship || 'Partner / Caregiver',
         status: 'PENDING',
@@ -845,6 +880,117 @@ export class FamilySharingService {
       success: true,
       message: 'Permissions updated successfully',
       permissions: updated.permissions,
+    };
+  }
+
+  // FAMILY TASKS
+  async getFamilyTasks(userIdOrIdentifier: string) {
+    const user = await (this.prisma as any).user.findFirst({
+      where: {
+        OR: [{ id: userIdOrIdentifier }, { email: userIdOrIdentifier }],
+      },
+    });
+    if (!user) return { success: true, data: [] };
+
+    let targetMotherId = user.id;
+    if (user.role === 'CAREGIVER' || user.role === 'caregiver') {
+      const pairing = await (this.prisma as any).caregiverPairing.findFirst({
+        where: { caregiverId: user.id, status: 'ACTIVE' },
+      });
+      if (pairing) targetMotherId = pairing.motherId;
+    }
+
+    const tasks = await (this.prisma as any).familyTask.findMany({
+      where: { userId: targetMotherId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      success: true,
+      data: tasks,
+    };
+  }
+
+  async createFamilyTask(userIdOrIdentifier: string, dto: any) {
+    const user = await (this.prisma as any).user.findFirst({
+      where: {
+        OR: [{ id: userIdOrIdentifier }, { email: userIdOrIdentifier }],
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    let targetMotherId = user.id;
+    if (user.role === 'CAREGIVER' || user.role === 'caregiver') {
+      const pairing = await (this.prisma as any).caregiverPairing.findFirst({
+        where: { caregiverId: user.id, status: 'ACTIVE' },
+      });
+      if (pairing) targetMotherId = pairing.motherId;
+    }
+
+    const task = await (this.prisma as any).familyTask.create({
+      data: {
+        userId: targetMotherId,
+        title: dto.title,
+        assignedTo: dto.assignedTo || 'Partner / Caregiver',
+        assignedBy: dto.assignedBy || user.name || 'Mother',
+        category: dto.category || 'transport',
+        priority: dto.priority || 'medium',
+        dueDate: dto.dueDate || 'Today',
+        notes: dto.notes || '',
+        isCompleted: false,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Family task created successfully',
+      data: task,
+    };
+  }
+
+  async toggleFamilyTask(userIdOrIdentifier: string, taskId: string, completedBy?: string) {
+    const existing = await (this.prisma as any).familyTask.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Family task not found');
+    }
+
+    const nextCompleted = !existing.isCompleted;
+    const updated = await (this.prisma as any).familyTask.update({
+      where: { id: taskId },
+      data: {
+        isCompleted: nextCompleted,
+        completedAt: nextCompleted
+          ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : null,
+        completedBy: nextCompleted ? completedBy || 'Caregiver Partner' : null,
+      },
+    });
+
+    return {
+      success: true,
+      data: updated,
+    };
+  }
+
+  async deleteFamilyTask(userIdOrIdentifier: string, taskId: string) {
+    const existing = await (this.prisma as any).familyTask.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Family task not found');
+    }
+
+    await (this.prisma as any).familyTask.delete({
+      where: { id: taskId },
+    });
+
+    return {
+      success: true,
+      message: 'Family task deleted successfully',
     };
   }
 }

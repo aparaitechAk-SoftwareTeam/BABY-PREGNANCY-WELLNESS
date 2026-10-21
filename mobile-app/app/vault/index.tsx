@@ -32,7 +32,7 @@ import {
   FileCheck2,
   Sparkles,
 } from 'lucide-react-native';
-import { useVaultStore, MedicalDocument, DocumentCategory } from '../../store/vault.store';
+import { useVaultStore, MedicalDocument, DocumentCategory, isMockDocument } from '../../store/vault.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
 export default function DocumentVaultScreen() {
@@ -155,33 +155,38 @@ export default function DocumentVaultScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Quick Stats Strip */}
-        <View style={styles.statsStrip}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{documents.length}</Text>
-            <Text style={styles.statLabel}>Total Files</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {documents.filter((d) => d.category === 'ultrasound').length}
-            </Text>
-            <Text style={styles.statLabel}>Ultrasounds</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {documents.filter((d) => d.category === 'lab_report').length}
-            </Text>
-            <Text style={styles.statLabel}>Lab Tests</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>
-              {documents.filter((d) => d.isSharedWithCaregiver).length}
-            </Text>
-            <Text style={styles.statLabel}>Shared Partner</Text>
-          </View>
-        </View>
+        {(() => {
+          const realDocuments = documents.filter((d) => !isMockDocument(d.id));
+          return (
+            <View style={styles.statsStrip}>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{realDocuments.length}</Text>
+                <Text style={styles.statLabel}>Total Files</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>
+                  {realDocuments.filter((d) => d.category === 'ultrasound').length}
+                </Text>
+                <Text style={styles.statLabel}>Ultrasounds</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>
+                  {realDocuments.filter((d) => d.category === 'lab_report').length}
+                </Text>
+                <Text style={styles.statLabel}>Lab Tests</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>
+                  {realDocuments.filter((d) => d.isSharedWithCaregiver).length}
+                </Text>
+                <Text style={styles.statLabel}>Shared Partner</Text>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Search Bar */}
         <View style={styles.searchBar}>

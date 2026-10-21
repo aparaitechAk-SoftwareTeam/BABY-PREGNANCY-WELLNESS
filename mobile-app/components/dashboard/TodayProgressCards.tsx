@@ -81,7 +81,7 @@ export function TodayProgressCards({
         <TouchableOpacity
           style={[styles.metricCard, { backgroundColor: '#F3E8FF', borderColor: '#DDD6FE' }]}
           activeOpacity={0.8}
-          onPress={() => router.push('/tracking/mood')}
+          onPress={() => router.push('/tracking/sleep')}
         >
           <View style={[styles.iconCircle, { backgroundColor: '#DDD6FE' }]}>
             <Moon size={18} color="#8B5CF6" strokeWidth={2.5} />

@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { FamilySharingService } from './family-sharing.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -34,8 +35,14 @@ export class FamilySharingController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('my-code')
-  async getMotherCode(@CurrentUser() user: any) {
-    const motherId = user?.sub || user?.id;
+  async getMotherCode(@CurrentUser() user: any, @Req() req: any) {
+    const motherId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.familySharingService.getOrCreateMotherCode(motherId);
   }
 
@@ -46,9 +53,16 @@ export class FamilySharingController {
   @Post('generate-code')
   async generateNewCode(
     @CurrentUser() user: any,
+    @Req() req: any,
     @Body('relationship') relationship?: string,
   ) {
-    const motherId = user?.sub || user?.id;
+    const motherId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.familySharingService.generateNewCode(motherId, relationship);
   }
 
@@ -150,5 +164,73 @@ export class FamilySharingController {
   ) {
     const motherId = user?.sub || user?.id;
     return this.familySharingService.updatePermissions(motherId, pairingId, permissions);
+  }
+
+  /**
+   * FAMILY TASKS COORDINATION (Neon PostgreSQL Database)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('tasks')
+  async getFamilyTasks(@CurrentUser() user: any, @Req() req: any) {
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
+    return this.familySharingService.getFamilyTasks(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tasks')
+  async createFamilyTask(
+    @CurrentUser() user: any,
+    @Body() dto: any,
+    @Req() req: any,
+  ) {
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
+    return this.familySharingService.createFamilyTask(userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('tasks/:id/toggle')
+  async toggleFamilyTask(
+    @CurrentUser() user: any,
+    @Param('id') taskId: string,
+    @Req() req: any,
+    @Body('completedBy') completedBy?: string,
+  ) {
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
+    return this.familySharingService.toggleFamilyTask(userId, taskId, completedBy);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('tasks/:id')
+  async deleteFamilyTask(
+    @CurrentUser() user: any,
+    @Param('id') taskId: string,
+    @Req() req: any,
+  ) {
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
+    return this.familySharingService.deleteFamilyTask(userId, taskId);
   }
 }

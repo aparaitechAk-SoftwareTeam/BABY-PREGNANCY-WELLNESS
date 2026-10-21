@@ -34,23 +34,8 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
-
-interface PairedMember {
-  id: string;
-  name: string;
-  relationship: string;
-  status: 'Active' | 'Pending';
-  connectedDate: string;
-  avatarColor: string;
-  permissions: {
-    milestones: boolean;
-    appointments: boolean;
-    kicks: boolean;
-    emergency: boolean;
-  };
-}
-
 import { useFamilyStore } from '../../store/family.store';
+import { PairedMember } from '../../services/api/family.api';
 
 export default function PartnerSyncScreen() {
   const router = useRouter();
@@ -73,31 +58,10 @@ export default function PartnerSyncScreen() {
     fetchMotherPairingInfo();
   }, [fetchMotherPairingInfo]);
 
-  // Combine live database members with emergency contact if configured
-  const displayMembers: any[] = React.useMemo(() => {
-    if (pairedMembers && pairedMembers.length > 0) {
-      return pairedMembers;
-    }
-    if (profile?.emergencyContactName) {
-      return [
-        {
-          id: 'pm-emergency',
-          name: profile.emergencyContactName,
-          relationship: profile.emergencyContactRelation || 'Emergency Contact / Partner',
-          status: 'Active',
-          connectedDate: 'Configured by Mother',
-          avatarColor: '#E11D48',
-          permissions: {
-            milestones: true,
-            appointments: true,
-            kicks: true,
-            emergency: true,
-          },
-        },
-      ];
-    }
-    return [];
-  }, [pairedMembers, profile]);
+  // Strictly use live database paired members - no mock emergency contact synthesized
+  const displayMembers: PairedMember[] = React.useMemo(() => {
+    return pairedMembers || [];
+  }, [pairedMembers]);
 
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -228,7 +192,7 @@ export default function PartnerSyncScreen() {
           {/* Code Box */}
           <View style={styles.codeContainer}>
             <View style={styles.codeTextCol}>
-              <Text style={styles.codeLabel}>YOUR 6-CHARACTER PAIRING CODE</Text>
+              <Text style={styles.codeLabel}>YOUR 6-DIGIT PAIRING CODE</Text>
               <Text style={styles.codeNumber}>{inviteCode}</Text>
             </View>
 

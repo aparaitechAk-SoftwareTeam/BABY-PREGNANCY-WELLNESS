@@ -127,22 +127,26 @@ export const useStepsStore = create<StepsState>((set, get) => ({
     // 2. Offline fallback to local storage
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const todayStr = new Date().toISOString().slice(0, 10);
       if (stored) {
         const parsed = JSON.parse(stored);
+        const isToday = parsed.dateStr === todayStr;
+        // Purge old mock default of 4320 steps
+        const validTodaySteps = isToday && parsed.todaySteps !== 4320 ? (Number(parsed.todaySteps) || 0) : 0;
         set({
-          todaySteps: parsed.todaySteps ?? 0,
+          todaySteps: validTodaySteps,
           stepGoal: parsed.stepGoal ?? defaultGoal,
-          distanceKm: parsed.distanceKm ?? 0,
-          activeMinutes: parsed.activeMinutes ?? 0,
-          caloriesKcal: parsed.caloriesKcal ?? 0,
+          distanceKm: isToday ? (parsed.distanceKm ?? 0) : 0,
+          activeMinutes: isToday ? (parsed.activeMinutes ?? 0) : 0,
+          caloriesKcal: isToday ? (parsed.caloriesKcal ?? 0) : 0,
           weeklyHistory: parsed.weeklyHistory ?? [],
           isLoading: false,
         });
         return;
       }
-      set({ stepGoal: defaultGoal, isLoading: false });
+      set({ todaySteps: 0, stepGoal: defaultGoal, isLoading: false });
     } catch {
-      set({ isLoading: false });
+      set({ todaySteps: 0, isLoading: false });
     }
   },
 

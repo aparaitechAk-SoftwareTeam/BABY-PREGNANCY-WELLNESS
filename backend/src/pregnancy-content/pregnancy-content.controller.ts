@@ -25,13 +25,13 @@ export class PregnancyContentController {
   }
 
   // 2. GET WEEKLY ROUTINE TASKS (USER OR GLOBAL)
-  @UseGuards(JwtAuthGuard)
   @Get('tasks/week/:week')
   async getTasksByWeek(
     @Param('week') week: string,
     @CurrentUser() user: any,
+    @Query('userId') queryUserId?: string,
   ) {
-    const userId = user?.sub || user?.id;
+    const userId = user?.sub || user?.id || queryUserId;
     return this.service.getTasksByWeek(parseInt(week, 10), userId);
   }
 

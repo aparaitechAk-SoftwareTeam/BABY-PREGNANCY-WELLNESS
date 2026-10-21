@@ -1,4 +1,27 @@
 import { apiClient } from './client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+async function getAuthContext() {
+  const headers: Record<string, string> = {};
+  let userId = '';
+  let email = '';
+  try {
+    const token = await AsyncStorage.getItem('aparai_token');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const userStr = await AsyncStorage.getItem('aparai_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      userId = user?.id || user?.sub || '';
+      email = user?.email || '';
+      if (userId) headers['x-user-id'] = userId;
+      if (email) headers['x-user-email'] = email;
+    }
+  } catch {
+    // quiet catch
+  }
+  return { headers, userId, email };
+}
 
 export interface PairedMember {
   id: string;
@@ -151,7 +174,11 @@ export const familyApi = {
     pairedMembers: PairedMember[];
     pendingRequests: PendingRequest[];
   }> => {
-    const res = await apiClient.get('/family/my-code');
+    const auth = await getAuthContext();
+    const res = await apiClient.get('/family/my-code', {
+      headers: auth.headers,
+      params: auth.userId ? { userId: auth.userId, email: auth.email } : undefined,
+    });
     return res.data;
   },
 
@@ -163,7 +190,12 @@ export const familyApi = {
     message: string;
     pairingCode: string;
   }> => {
-    const res = await apiClient.post('/family/generate-code', { relationship });
+    const auth = await getAuthContext();
+    const res = await apiClient.post(
+      '/family/generate-code',
+      { relationship, userId: auth.userId, email: auth.email },
+      { headers: auth.headers }
+    );
     return res.data;
   },
 

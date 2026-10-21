@@ -48,6 +48,8 @@ model User {
   pairingsAsMother    CaregiverPairing[] @relation("MotherPairings")
   pairingsAsCaregiver CaregiverPairing[] @relation("CaregiverPairings")
   subscriptions       Subscription[]
+  familyTasks         FamilyTask[]
+  medicalDocuments    MedicalDocument[]
 }
 
 model OtpCode {
@@ -374,6 +376,47 @@ model Subscription {
 
   @@index([userId, status])
   @@index([status])
+}
+
+model FamilyTask {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  assignedTo  String   @default("Partner / Caregiver")
+  assignedBy  String   @default("Mother")
+  category    String   @default("transport") // 'transport' | 'pharmacy' | 'appointment_prep' | 'shopping' | 'home_setup' | 'custom'
+  priority    String   @default("medium")    // 'low' | 'medium' | 'high' | 'urgent'
+  dueDate     String   @default("Today")
+  notes       String?
+  isCompleted Boolean  @default(false)
+  completedAt String?
+  completedBy String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isCompleted])
+}
+
+model MedicalDocument {
+  id                    String   @id @default(uuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                 String
+  category              String   // 'ultrasound' | 'prescription' | 'lab_report' | 'discharge_summary' | 'vaccination'
+  date                  String   // YYYY-MM-DD
+  doctorName            String?
+  clinicName            String?
+  notes                 String?
+  fileType              String   @default("pdf")
+  fileSize              String?
+  fileUrl               String?
+  isSharedWithCaregiver Boolean  @default(true)
+  appointmentId         String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId, category])
 }
 
 

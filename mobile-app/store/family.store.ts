@@ -53,8 +53,8 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
           pendingRequests: res.pendingRequests || [],
         });
       }
-    } catch {
-      // Keep existing state or fallback
+    } catch (e) {
+      console.warn('Failed to fetch mother pairing info:', e);
     } finally {
       set({ isLoadingMotherCode: false });
     }

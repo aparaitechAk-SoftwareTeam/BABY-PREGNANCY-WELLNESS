@@ -60,22 +60,20 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
       // Deferred sync
     }
 
-    // 2. Local AsyncStorage fallback
+    // 2. Local AsyncStorage fallback (strictly real non-mock tasks)
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.date === todayStr && Array.isArray(parsed.tasks)) {
-          set({ tasks: parsed.tasks, currentDateStr: todayStr, isLoading: false });
-          return;
-        } else if (Array.isArray(parsed.tasks)) {
-          const resetTasks = parsed.tasks.map((t: RoutineTask) => ({
-            ...t,
-            isCompleted: false,
-            completedAt: undefined,
-          }));
-          set({ tasks: resetTasks, currentDateStr: todayStr, isLoading: false });
-          return;
+        if (Array.isArray(parsed.tasks)) {
+          const cleanTasks = parsed.tasks.filter((t: RoutineTask) => t.id && !t.id.startsWith('rt-'));
+          if (cleanTasks.length > 0) {
+            const finalTasks = parsed.date === todayStr
+              ? cleanTasks
+              : cleanTasks.map((t: RoutineTask) => ({ ...t, isCompleted: false, completedAt: undefined }));
+            set({ tasks: finalTasks, currentDateStr: todayStr, isLoading: false });
+            return;
+          }
         }
       }
     } catch {

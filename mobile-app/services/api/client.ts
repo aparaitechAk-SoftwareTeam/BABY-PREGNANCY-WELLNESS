@@ -38,12 +38,19 @@ export const apiClient = axios.create({
   },
 });
 
-// Automatically attach stored JWT token to all requests
+// Automatically attach stored JWT token and user info to all requests
 apiClient.interceptors.request.use(async (config) => {
   try {
     const token = await AsyncStorage.getItem('aparai_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const userStr = await AsyncStorage.getItem('aparai_user');
+    if (userStr && config.headers) {
+      const user = JSON.parse(userStr);
+      const uid = user?.id || user?.sub;
+      if (uid) config.headers['x-user-id'] = uid;
+      if (user?.email) config.headers['x-user-email'] = user.email;
     }
   } catch {
     // Ignore storage errors

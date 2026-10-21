@@ -32,6 +32,7 @@ import {
   Check,
   X,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react-native';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useFamilyStore } from '../../store/family.store';
@@ -52,7 +53,12 @@ export default function PartnerSyncScreen() {
   const rejectCaregiverRequest = useFamilyStore((state) => state.rejectCaregiverRequest);
   const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
 
-  const inviteCode = pairingCode || (isLoadingMotherCode ? 'Loading...' : 'Generating code...');
+  const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const inviteCode =
+    pairingCode ||
+    (isRegenerating ? 'Generating...' : isLoadingMotherCode ? 'Loading...' : 'Tap to Generate');
 
   React.useEffect(() => {
     fetchMotherPairingInfo();
@@ -62,9 +68,6 @@ export default function PartnerSyncScreen() {
   const displayMembers: PairedMember[] = React.useMemo(() => {
     return pairedMembers || [];
   }, [pairedMembers]);
-
-  const [copied, setCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const handleCopyCode = () => {
     setCopied(true);
@@ -191,28 +194,43 @@ export default function PartnerSyncScreen() {
 
           {/* Code Box */}
           <View style={styles.codeContainer}>
-            <View style={styles.codeTextCol}>
+            <TouchableOpacity
+              style={styles.codeTextCol}
+              onPress={!pairingCode ? handleRegenerateCode : undefined}
+              activeOpacity={!pairingCode ? 0.7 : 1}
+            >
               <Text style={styles.codeLabel}>YOUR 6-DIGIT PAIRING CODE</Text>
               <Text style={styles.codeNumber}>{inviteCode}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.copyBtn, copied && styles.copyBtnDone]}
-              onPress={handleCopyCode}
-              activeOpacity={0.8}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 size={16} color="#FFFFFF" />
-                  <Text style={styles.copyBtnText}>Copied</Text>
-                </>
-              ) : (
-                <>
-                  <Copy size={16} color="#FFFFFF" />
-                  <Text style={styles.copyBtnText}>Copy</Text>
-                </>
-              )}
             </TouchableOpacity>
+
+            <View style={styles.codeActions}>
+              <TouchableOpacity
+                style={styles.refreshBtn}
+                onPress={handleRegenerateCode}
+                disabled={isRegenerating || isLoadingMotherCode}
+                activeOpacity={0.7}
+              >
+                <RefreshCw size={15} color="#059669" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.copyBtn, copied && styles.copyBtnDone]}
+                onPress={handleCopyCode}
+                activeOpacity={0.8}
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle2 size={16} color="#FFFFFF" />
+                    <Text style={styles.copyBtnText}>Copied</Text>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} color="#FFFFFF" />
+                    <Text style={styles.copyBtnText}>Copy</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Share Action Buttons */}
@@ -543,6 +561,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: 2,
+  },
+  codeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshBtn: {
+    padding: 9,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   copyBtn: {
     flexDirection: 'row',

@@ -1,5 +1,8 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { familyApi, PairedMember, PendingRequest, MotherLiveData } from '../services/api/family.api';
+
+const CACHED_CODE_KEY = '@aparaitech_mother_pairing_code';
 
 interface FamilyStoreState {
   // Mother's state
@@ -43,18 +46,48 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
   isPairingSubmitting: false,
 
   fetchMotherPairingInfo: async () => {
-    set({ isLoadingMotherCode: true });
+    // 1. Immediately hydrate from cache to prevent any "Loading..." or "Generating..." delay
+    try {
+      const cached = await AsyncStorage.getItem(CACHED_CODE_KEY);
+      if (cached && !get().pairingCode) {
+        set({ pairingCode: cached });
+      }
+    } catch {
+      // quiet cache catch
+    }
+
+    set({ isLoadingMotherCode: !get().pairingCode });
     try {
       const res = await familyApi.getMyCode();
-      if (res && res.success) {
+      if (res && res.success && res.pairingCode) {
         set({
-          pairingCode: res.pairingCode || '',
+          pairingCode: res.pairingCode,
           pairedMembers: res.pairedMembers || [],
           pendingRequests: res.pendingRequests || [],
         });
+        await AsyncStorage.setItem(CACHED_CODE_KEY, res.pairingCode);
+        return;
+      }
+
+      // If database returned empty or no pairing code, request database to generate one
+      if (!get().pairingCode) {
+        const genRes = await familyApi.generateNewCode();
+        if (genRes && genRes.pairingCode) {
+          set({ pairingCode: genRes.pairingCode });
+          await AsyncStorage.setItem(CACHED_CODE_KEY, genRes.pairingCode);
+        }
       }
     } catch (e) {
-      console.warn('Failed to fetch mother pairing info:', e);
+      console.warn('Failed to fetch mother pairing info from server:', e);
+      // Fallback: check if we have any cached code
+      try {
+        const cached = await AsyncStorage.getItem(CACHED_CODE_KEY);
+        if (cached) {
+          set({ pairingCode: cached });
+        }
+      } catch {
+        // ignore
+      }
     } finally {
       set({ isLoadingMotherCode: false });
     }
@@ -66,6 +99,7 @@ export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
       const res = await familyApi.generateNewCode(relationship);
       if (res && res.pairingCode) {
         set({ pairingCode: res.pairingCode });
+        await AsyncStorage.setItem(CACHED_CODE_KEY, res.pairingCode);
         return res.pairingCode;
       }
       return get().pairingCode;

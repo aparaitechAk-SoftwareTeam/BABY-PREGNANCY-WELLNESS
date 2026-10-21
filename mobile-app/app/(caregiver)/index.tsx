@@ -120,18 +120,30 @@ export default function CaregiverHome() {
   const routineCompleted = routineTasks.filter((t) => t.isCompleted).length;
   const routinePercentage = routineTotal > 0 ? Math.round((routineCompleted / routineTotal) * 100) : 0;
 
-  const todaySteps = motherLiveData?.today?.steps ?? useStepsStore((state) => state.todaySteps);
-  const stepGoal = motherLiveData?.today?.stepGoal ?? useStepsStore((state) => state.stepGoal);
+  const localTodaySteps = useStepsStore((state) => state.todaySteps);
+  const localStepGoal = useStepsStore((state) => state.stepGoal);
+  const todaySteps = motherLiveData?.today?.steps ?? localTodaySteps;
+  const stepGoal = motherLiveData?.today?.stepGoal ?? localStepGoal;
   const stepsPercentage = stepGoal > 0 ? Math.min(100, Math.round((todaySteps / stepGoal) * 100)) : 0;
 
   const familyTasks = useFamilyTasksStore((state) => state.tasks);
   const toggleFamilyTask = useFamilyTasksStore((state) => state.toggleTask);
 
   const checklist = useBirthPrepStore((state) => state.checklist);
-  const birthStats = useBirthPrepStore((state) => state.getStats());
   const loadBirthPrepData = useBirthPrepStore((state) => state.loadBirthPrepData);
   const toggleItemPacked = useBirthPrepStore((state) => state.toggleItemPacked);
   const unreadUpdates = useNotificationStore((state) => state.unreadCount);
+
+  const birthStats = React.useMemo(() => {
+    const list = checklist || [];
+    const total = list.length;
+    const packed = list.filter((i) => i.isPacked).length;
+    return {
+      total,
+      packed,
+      percent: total > 0 ? Math.round((packed / total) * 100) : 0,
+    };
+  }, [checklist]);
 
   const handlePairSubmit = async () => {
     if (!pairingInput.trim()) {

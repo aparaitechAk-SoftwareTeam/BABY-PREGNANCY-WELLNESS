@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,6 +63,11 @@ export default function SignupScreen() {
 
   // Caregiver Joining Code state
   const [joiningCode, setJoiningCode] = useState('');
+
+  // Google Account Picker Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
 
   const handleSignup = async () => {
     setErrorMessage('');
@@ -169,9 +175,27 @@ export default function SignupScreen() {
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignUp = () => {
     setErrorMessage('');
+    if (!isMother) {
+      if (!joiningCode.trim()) {
+        setErrorMessage('Please enter the 6-digit joining code provided by the mother before continuing with Google');
+        return;
+      }
+    }
+    setGoogleEmail(email.trim());
+    setGoogleName(fullName.trim());
+    setShowGoogleModal(true);
+  };
+
+  const handleConfirmGoogleAuth = async () => {
+    if (!googleEmail.trim() || !googleEmail.includes('@')) {
+      Alert.alert('Invalid Google Email', 'Please enter a valid Google email address (e.g. yourname@gmail.com).');
+      return;
+    }
+
     setSocialLoading('google');
+    setErrorMessage('');
     try {
       const role = isMother ? 'MOTHER' : 'CAREGIVER';
 
@@ -189,19 +213,15 @@ export default function SignupScreen() {
         }
       }
 
-      const candidateEmail =
-        /^[a-zA-Z0-9._%+-]+@.+$/.test(email.trim())
-          ? email.trim().toLowerCase()
-          : (fullName.trim() ? `${fullName.trim().toLowerCase().replace(/\s+/g, '.')}@gmail.com` : 'google.user@gmail.com');
-
       const response = await authApi.googleAuth({
-        email: candidateEmail,
-        name: fullName.trim() || 'Google User',
+        email: googleEmail.trim().toLowerCase(),
+        name: googleName.trim() || googleEmail.split('@')[0],
         role,
         joiningCode: !isMother ? joiningCode.trim().toUpperCase() : undefined,
       });
 
       const { user, token } = response.data;
+      setShowGoogleModal(false);
 
       await resetPregnancyProfile();
       await setUser(user);
@@ -669,6 +689,76 @@ export default function SignupScreen() {
         type="privacy"
         onClose={() => setPrivacyModalVisible(false)}
       />
+
+      {/* Google Account Picker Modal */}
+      <Modal
+        visible={showGoogleModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGoogleModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.googleModalOverlay}
+        >
+          <View style={styles.googleModalContent}>
+            <View style={styles.googleModalHeader}>
+              <GoogleIcon size={28} />
+              <Text style={styles.googleModalTitle}>Sign in with Google</Text>
+              <Text style={styles.googleModalSub}>
+                Select or enter your Google account to continue as {isMother ? 'Mother' : 'Caregiver'}
+              </Text>
+            </View>
+
+            <View style={styles.googleInputGroup}>
+              <Text style={styles.googleInputLabel}>Google Account Email</Text>
+              <TextInput
+                style={styles.googleInputField}
+                placeholder="your.email@gmail.com"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={googleEmail}
+                onChangeText={setGoogleEmail}
+              />
+            </View>
+
+            <View style={styles.googleInputGroup}>
+              <Text style={styles.googleInputLabel}>Account Name (Optional)</Text>
+              <TextInput
+                style={styles.googleInputField}
+                placeholder="Full Name"
+                placeholderTextColor="#94A3B8"
+                value={googleName}
+                onChangeText={setGoogleName}
+              />
+            </View>
+
+            <View style={styles.googleModalBtnRow}>
+              <TouchableOpacity
+                style={styles.googleCancelBtn}
+                onPress={() => setShowGoogleModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.googleCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.googleConfirmBtn}
+                onPress={handleConfirmGoogleAuth}
+                disabled={socialLoading === 'google'}
+                activeOpacity={0.85}
+              >
+                {socialLoading === 'google' ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.googleConfirmText}>Continue as Google User</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1053,5 +1143,90 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#94A3B8',
     textAlign: 'center',
+  },
+  googleModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  googleModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  googleModalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  googleModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 8,
+  },
+  googleModalSub: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  googleInputGroup: {
+    marginBottom: 14,
+  },
+  googleInputLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  googleInputField: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  googleModalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  googleCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleCancelText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  googleConfirmBtn: {
+    flex: 2,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleConfirmText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

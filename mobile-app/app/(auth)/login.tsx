@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,6 +36,12 @@ export default function LoginScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Google Account Picker Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [googleRole, setGoogleRole] = useState<'MOTHER' | 'CAREGIVER'>('MOTHER');
 
   const handleLogin = async () => {
     setErrorMessage('');
@@ -97,22 +104,33 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setErrorMessage('');
-    setSocialLoading('google');
-    try {
-      let candidateEmail = emailOrPhone.trim().toLowerCase();
-      if (!candidateEmail || !candidateEmail.includes('@')) {
-        candidateEmail = 'google.mother@gmail.com';
-      }
+    const candidate = emailOrPhone.trim();
+    if (candidate.includes('@')) {
+      setGoogleEmail(candidate);
+    }
+    setShowGoogleModal(true);
+  };
 
+  const handleConfirmGoogleAuth = async () => {
+    if (!googleEmail.trim() || !googleEmail.includes('@')) {
+      Alert.alert('Invalid Google Email', 'Please enter a valid Google email address (e.g. yourname@gmail.com).');
+      return;
+    }
+
+    setSocialLoading('google');
+    setErrorMessage('');
+    try {
       const response = await authApi.googleAuth({
-        email: candidateEmail,
-        name: candidateEmail.split('@')[0].replace('.', ' '),
-        role: 'MOTHER',
+        email: googleEmail.trim().toLowerCase(),
+        name: googleName.trim() || googleEmail.split('@')[0].replace('.', ' '),
+        role: googleRole,
       });
 
       const { user, token } = response.data;
+      setShowGoogleModal(false);
+
       await setUser(user);
       await setToken(token);
 
@@ -433,6 +451,98 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Google Account Picker Modal */}
+      <Modal
+        visible={showGoogleModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGoogleModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.googleModalOverlay}
+        >
+          <View style={styles.googleModalContent}>
+            <View style={styles.googleModalHeader}>
+              <GoogleIcon size={28} />
+              <Text style={styles.googleModalTitle}>Sign in with Google</Text>
+              <Text style={styles.googleModalSub}>
+                Select your account and role to log in
+              </Text>
+            </View>
+
+            {/* Role selector */}
+            <View style={styles.googleRoleContainer}>
+              <TouchableOpacity
+                style={[styles.googleRoleBtn, googleRole === 'MOTHER' && styles.googleRoleBtnActive]}
+                onPress={() => setGoogleRole('MOTHER')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.googleRoleText, googleRole === 'MOTHER' && styles.googleRoleTextActive]}>
+                  Expecting Mother
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.googleRoleBtn, googleRole === 'CAREGIVER' && styles.googleRoleBtnActive]}
+                onPress={() => setGoogleRole('CAREGIVER')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.googleRoleText, googleRole === 'CAREGIVER' && styles.googleRoleTextActive]}>
+                  Caregiver / Partner
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.googleInputGroup}>
+              <Text style={styles.googleInputLabel}>Google Account Email</Text>
+              <TextInput
+                style={styles.googleInputField}
+                placeholder="your.email@gmail.com"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={googleEmail}
+                onChangeText={setGoogleEmail}
+              />
+            </View>
+
+            <View style={styles.googleInputGroup}>
+              <Text style={styles.googleInputLabel}>Account Name (Optional)</Text>
+              <TextInput
+                style={styles.googleInputField}
+                placeholder="Full Name"
+                placeholderTextColor="#94A3B8"
+                value={googleName}
+                onChangeText={setGoogleName}
+              />
+            </View>
+
+            <View style={styles.googleModalBtnRow}>
+              <TouchableOpacity
+                style={styles.googleCancelBtn}
+                onPress={() => setShowGoogleModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.googleCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.googleConfirmBtn}
+                onPress={handleConfirmGoogleAuth}
+                disabled={socialLoading === 'google'}
+                activeOpacity={0.85}
+              >
+                {socialLoading === 'google' ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.googleConfirmText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -791,5 +901,117 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#94A3B8',
     textAlign: 'center',
+  },
+  googleModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  googleModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  googleModalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  googleModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 8,
+  },
+  googleModalSub: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  googleRoleContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  googleRoleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+  },
+  googleRoleBtnActive: {
+    borderColor: '#E11D48',
+    backgroundColor: '#FFF1F2',
+  },
+  googleRoleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  googleRoleTextActive: {
+    color: '#E11D48',
+    fontWeight: '700',
+  },
+  googleInputGroup: {
+    marginBottom: 14,
+  },
+  googleInputLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+  },
+  googleInputField: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  googleModalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  googleCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleCancelText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  googleConfirmBtn: {
+    flex: 2,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleConfirmText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

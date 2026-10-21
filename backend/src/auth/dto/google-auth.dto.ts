@@ -24,6 +24,14 @@ export class GoogleAuthDto {
   @IsOptional()
   @IsString()
   joiningCode?: string;
+
+  @IsOptional()
+  @IsString()
+  token?: string;
+
+  @IsOptional()
+  @IsString()
+  idToken?: string;
 }
 
 export class ValidateJoiningCodeDto {

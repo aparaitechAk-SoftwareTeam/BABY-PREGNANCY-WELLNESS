@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { SupportModule } from './support/support.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { FamilySharingModule } from './family-sharing/family-sharing.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { FamilySharingModule } from './family-sharing/family-sharing.module';
     SupportModule,
     AppointmentsModule,
     FamilySharingModule,
+    SubscriptionsModule,
   ],
   controllers: [],
   providers: [],

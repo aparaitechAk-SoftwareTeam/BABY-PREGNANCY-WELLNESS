@@ -47,6 +47,7 @@ model User {
   maternalNotes      MaternalNote[]
   pairingsAsMother    CaregiverPairing[] @relation("MotherPairings")
   pairingsAsCaregiver CaregiverPairing[] @relation("CaregiverPairings")
+  subscriptions       Subscription[]
 }
 
 model OtpCode {
@@ -333,4 +334,46 @@ model CaregiverPairing {
   @@index([caregiverId])
   @@index([pairingCode])
 }
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+model SubscriptionPlan {
+  id           String         @id @default(uuid())
+  code         String         @unique // 'free', 'premium_monthly', 'premium_yearly'
+  name         String
+  price        Float          @default(0.0)
+  billingCycle String         @default("monthly") // 'monthly' | 'yearly' | 'lifetime'
+  features     String[]       // array of feature strings
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId          String
+  plan            SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime           @default(now())
+  endDate         DateTime?
+  autoRenew       Boolean            @default(true)
+  amountPaid      Float              @default(0.0)
+  paymentProvider String?            @default("STRIPE") // 'STRIPE', 'RAZORPAY', 'MANUAL', 'IN_APP'
+  paymentId       String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([userId, status])
+  @@index([status])
+}
+
 

@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Headphones,
   UserCog,
+  CheckSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 
@@ -32,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'User Management', path: '/users', icon: Users, roles: ['admin'] },
   { label: 'Pregnancy Content', path: '/content', icon: BookOpen, roles: ['admin'] },
   { label: 'Week-by-Week Content', path: '/content/week-by-week', icon: CalendarDays, roles: ['admin'] },
+  { label: 'Weekly Tasks', path: '/tasks', icon: CheckSquare, roles: ['admin'] },
   { label: 'FAQ Management', path: '/faqs', icon: HelpCircle, roles: ['admin'] },
   { label: 'Announcements', path: '/announcements', icon: Megaphone, roles: ['admin'] },
   { label: 'Notification Management', path: '/notifications', icon: Bell, roles: ['admin'] },

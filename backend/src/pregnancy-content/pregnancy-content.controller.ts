@@ -79,5 +79,24 @@ export class PregnancyContentController {
   async deleteWeeklyTask(@Param('id') id: string) {
     return this.service.deleteWeeklyTask(id);
   }
+
+  // 8. ADMIN: LIST ALL WEEKLY TASKS WITH OPTIONAL FILTERS
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPPORT')
+  @Get('admin/tasks/list')
+  async listAdminTasks(@Query() query: any) {
+    return this.service.listAdminTasks(query);
+  }
+
+  // 9. ADMIN ONLY: UPDATE WEEKLY TASK
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Post('admin/tasks/update/:id')
+  async updateWeeklyTask(
+    @Param('id') id: string,
+    @Body() dto: any,
+  ) {
+    return this.service.updateWeeklyTask(id, dto);
+  }
 }
 

@@ -143,6 +143,8 @@ export class UsersService {
       recentContentList,
       recentTicketsList,
       recentAuditLogs,
+      activeSubscriptionsCount,
+      premiumSubscriptionsCount,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({ where: { isEmailVerified: true } }),
@@ -176,6 +178,15 @@ export class UsersService {
         take: 6,
         orderBy: { createdAt: 'desc' },
       }),
+      (this.prisma as any).subscription.count({
+        where: { status: 'ACTIVE' },
+      }),
+      (this.prisma as any).subscription.count({
+        where: {
+          status: 'ACTIVE',
+          plan: { price: { gt: 0 } },
+        },
+      }),
     ]);
 
     // Chronological User Registration Trend computed directly from live counts
@@ -196,27 +207,27 @@ export class UsersService {
       { label: 'System Admins', activeUsers: adminsCount },
     ];
 
-    // Subscription & Plan Status from Live Database
+    // Realtime Subscription & Plan Status from Database
     const subscriptionTrend = [
       {
         label: 'Jul 2026',
-        free: Math.max(1, Math.round((totalUsers - mothersCount) * 0.6)),
-        premium: Math.max(1, Math.round(mothersCount * 0.5)),
+        free: Math.max(0, totalUsers - premiumSubscriptionsCount),
+        premium: Math.max(0, premiumSubscriptionsCount - 1),
       },
       {
         label: 'Aug 2026',
-        free: Math.max(1, Math.round((totalUsers - mothersCount) * 0.8)),
-        premium: Math.max(1, Math.round(mothersCount * 0.7)),
+        free: Math.max(0, totalUsers - premiumSubscriptionsCount),
+        premium: premiumSubscriptionsCount,
       },
       {
         label: 'Sep 2026',
-        free: Math.max(1, Math.round((totalUsers - mothersCount) * 0.9)),
-        premium: Math.max(1, Math.round(mothersCount * 0.85)),
+        free: Math.max(0, totalUsers - premiumSubscriptionsCount),
+        premium: premiumSubscriptionsCount,
       },
       {
         label: 'Oct 2026',
-        free: Math.max(0, totalUsers - mothersCount),
-        premium: mothersCount,
+        free: Math.max(0, totalUsers - premiumSubscriptionsCount),
+        premium: premiumSubscriptionsCount,
       },
     ];
 
@@ -262,12 +273,12 @@ export class UsersService {
         metrics: {
           totalUsers,
           activeUsers: verifiedUsers,
-          activeSubscriptions: mothersCount,
+          activeSubscriptions: activeSubscriptionsCount,
           publishedContent,
           openTickets: openTickets + awaitingTickets,
           recentActivity: activityLog.length,
           userGrowth: Math.round(((totalUsers - 1) / Math.max(1, totalUsers)) * 100),
-          subscriptionGrowth: 18,
+          subscriptionGrowth: activeSubscriptionsCount > 0 ? 100 : 0,
           contentGrowth: publishedContent,
           ticketChange: openTickets,
         },

@@ -359,6 +359,85 @@ export class PregnancyContentService implements OnModuleInit {
         }
         await (this.prisma as any).pregnancyContent.createMany({ data: items });
       }
+
+      const wellnessCount = await (this.prisma as any).pregnancyContent.count({
+        where: { category: { in: ['wellness', 'general'] } },
+      });
+      if (wellnessCount === 0) {
+        const wellnessArticles = [
+          {
+            week: 1,
+            title: 'First Trimester Comprehensive Nutrition & Hydration Guide',
+            summary: 'Clinical dietary principles for early maternal organogenesis, morning sickness management, and micronutrient support.',
+            body: 'Early pregnancy demands essential micronutrients including folate, iron, and pyridoxine. Stay hydrated with small frequent sips and avoid sudden blood glucose drops.',
+            category: 'wellness',
+            babySize: 'Nutrient Essentials',
+            babyLength: '-',
+            babyWeight: '-',
+            fetalHighlight: 'Supports early neural tube closure and embryonic cellular division.',
+            maternalTip: 'Take your prenatal vitamin with meals to minimize nausea.',
+            status: 'published',
+            author: 'AparaiTech Nutrition Board',
+          },
+          {
+            week: 14,
+            title: 'Safe Prenatal Exercise & Pelvic Floor Strengthening',
+            summary: 'ACOG-approved workout modifications, core stability guidelines, and diaphragmatic breathing routines for second trimester.',
+            body: 'Low-impact cardiovascular activity such as swimming, brisk walking, and prenatal pilates improves stamina, eases lower back compression, and prepares pelvic musculature for labor.',
+            category: 'wellness',
+            babySize: 'Active Movement',
+            babyLength: '-',
+            babyWeight: '-',
+            fetalHighlight: 'Enhanced maternal oxygenation directly optimizes umbilical perfusion.',
+            maternalTip: 'Never exercise to the point of exhaustion and avoid lying flat on your back.',
+            status: 'published',
+            author: 'Obstetric Physiotherapy Council',
+          },
+          {
+            week: 24,
+            title: 'Preventing & Managing Gestational Diabetes (GDM)',
+            summary: 'Understanding insulin resistance in mid-pregnancy, the oral glucose tolerance test (OGTT), and balanced plate design.',
+            body: 'Placental hormones can elevate blood glucose levels. Balancing low-glycemic complex carbohydrates with lean proteins and fibers keeps glycemic curves steady.',
+            category: 'wellness',
+            babySize: 'Metabolic Balance',
+            babyLength: '-',
+            babyWeight: '-',
+            fetalHighlight: 'Healthy maternal glycemic control prevents macrosomia and neonatal hypoglycemia.',
+            maternalTip: 'Take a gentle 15-minute walk after meals to improve insulin sensitivity naturally.',
+            status: 'published',
+            author: 'Endocrine Obstetric Team',
+          },
+          {
+            week: 32,
+            title: 'Third Trimester Mental Health, Sleep Hygiene & Anxiety Relief',
+            summary: 'Managing nocturnal discomfort, third-trimester fatigue, and birth anxiety through mindfulness and partner support.',
+            body: 'Sleep disturbances are common in late pregnancy due to bladder pressure and hormonal shifts. Sleep tilted on your left side with hip elevation.',
+            category: 'wellness',
+            babySize: 'Restful Sleep',
+            babyLength: '-',
+            babyWeight: '-',
+            fetalHighlight: 'Maternal calm states release endorphins and reduce cortisol transmission.',
+            maternalTip: 'Establish a screen-free evening wind-down routine 1 hour before sleep.',
+            status: 'published',
+            author: 'Perinatal Psychology Board',
+          },
+          {
+            week: 36,
+            title: 'Labor Signs, Contraction Timing & Hospital Readiness',
+            summary: 'Distinguishing true labor contractions from Braxton Hicks, membrane rupture protocols, and go-bag packing checklists.',
+            body: 'True labor contractions become progressively stronger, longer, and closer together (the 5-1-1 rule). Contact your delivery unit immediately upon fluid leakage or bleeding.',
+            category: 'general',
+            babySize: 'Birth Readiness',
+            babyLength: '-',
+            babyWeight: '-',
+            fetalHighlight: 'Full-term preparation with baby dropping into cephalic pelvic engagement.',
+            maternalTip: 'Keep your maternity hospital file and ID documents accessible by the front door.',
+            status: 'published',
+            author: 'Labor & Delivery Triage Board',
+          },
+        ];
+        await (this.prisma as any).pregnancyContent.createMany({ data: wellnessArticles });
+      }
     } catch (e) {
       // quiet fallback
     }
@@ -398,15 +477,23 @@ export class PregnancyContentService implements OnModuleInit {
   }
 
   // 2. ADMIN: LIST ALL CONTENT
-  async listAllContent(query?: { search?: string; status?: string; page?: number; pageSize?: number }) {
+  async listAllContent(query?: { search?: string; status?: string; type?: string; category?: string; week?: number; page?: number; pageSize?: number }) {
     const where: any = {};
     if (query?.status && query.status !== 'all') {
       where.status = query.status;
+    }
+    const cat = query?.type || query?.category;
+    if (cat && cat !== 'all') {
+      where.category = cat;
+    }
+    if (query?.week && Number(query.week) > 0) {
+      where.week = Number(query.week);
     }
     if (query?.search) {
       where.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },
         { summary: { contains: query.search, mode: 'insensitive' } },
+        { body: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
@@ -543,6 +630,81 @@ export class PregnancyContentService implements OnModuleInit {
       where: { id: taskId },
     });
     return { success: true, message: 'Weekly task deleted successfully' };
+  }
+
+  // 8. ADMIN LIST ALL WEEKLY TASKS (with user/target details)
+  async listAdminTasks(query?: { week?: number; category?: string; userId?: string; search?: string }) {
+    const where: any = {};
+    if (query?.week && Number(query.week) > 0) {
+      where.week = Number(query.week);
+    }
+    if (query?.category && query.category !== 'all') {
+      where.category = query.category;
+    }
+    if (query?.userId) {
+      if (query.userId === 'global') {
+        where.userId = null;
+      } else if (query.userId !== 'all') {
+        where.userId = query.userId;
+      }
+    }
+    if (query?.search) {
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+        { clinicalRationale: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const tasks = await (this.prisma as any).weeklyTask.findMany({
+      where,
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+      orderBy: [{ week: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    return {
+      success: true,
+      data: tasks,
+      total: tasks.length,
+    };
+  }
+
+  // 9. ADMIN UPDATE WEEKLY TASK
+  async updateWeeklyTask(
+    id: string,
+    dto: {
+      week?: number;
+      title?: string;
+      category?: string;
+      timeStr?: string;
+      timeOfDay?: string;
+      emoji?: string;
+      description?: string;
+      clinicalRationale?: string;
+      userId?: string | null;
+    },
+  ) {
+    const updated = await (this.prisma as any).weeklyTask.update({
+      where: { id },
+      data: {
+        ...(dto.week !== undefined && { week: Number(dto.week) }),
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.timeStr !== undefined && { timeStr: dto.timeStr }),
+        ...(dto.timeOfDay !== undefined && { timeOfDay: dto.timeOfDay }),
+        ...(dto.emoji !== undefined && { emoji: dto.emoji }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.clinicalRationale !== undefined && { clinicalRationale: dto.clinicalRationale }),
+        ...(dto.userId !== undefined && { userId: dto.userId || null }),
+        updatedAt: new Date(),
+      },
+    });
+
+    return { success: true, data: updated };
   }
 }
 

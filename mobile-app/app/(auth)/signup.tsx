@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -189,9 +190,9 @@ export default function SignupScreen() {
       }
 
       const candidateEmail =
-        /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email.trim())
+        /^[a-zA-Z0-9._%+-]+@.+$/.test(email.trim())
           ? email.trim().toLowerCase()
-          : `${fullName.trim().toLowerCase().replace(/\s+/g, '.') || 'google.user'}@gmail.com`;
+          : (fullName.trim() ? `${fullName.trim().toLowerCase().replace(/\s+/g, '.')}@gmail.com` : 'google.user@gmail.com');
 
       const response = await authApi.googleAuth({
         email: candidateEmail,
@@ -206,11 +207,22 @@ export default function SignupScreen() {
       await setUser(user);
       await setToken(token);
 
-      if (isMother) {
-        router.replace('/(onboarding)/pregnancy-setup');
-      } else {
-        router.replace('/(caregiver)');
-      }
+      Alert.alert(
+        'Google Sign-Up Successful',
+        `Welcome to Aparaitech-wellness! Your account is verified without needing OTP. We have emailed your account login password to ${user.email} so you can also log in via Email & Password anytime.`,
+        [
+          {
+            text: 'Get Started',
+            onPress: () => {
+              if (isMother) {
+                router.replace('/(onboarding)/pregnancy-setup');
+              } else {
+                router.replace('/(caregiver)');
+              }
+            },
+          },
+        ]
+      );
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Google Sign-Up failed. Please try again.';
       setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Google Sign-Up failed.');

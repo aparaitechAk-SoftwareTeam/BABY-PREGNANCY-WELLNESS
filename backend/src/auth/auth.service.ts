@@ -447,9 +447,31 @@ export class AuthService implements OnModuleInit {
 
   /**
    * Google Social Authentication (Sign In & Sign Up in Neon DB)
+   * Unified Account Linking: If user signed up with email/password/OTP previously,
+   * Google sign-in returns the EXACT same user account & dashboard.
+   * If new user, creates account, marks verified (no OTP needed), and emails generated
+   * password to user so they can also log in via Email & Password anytime.
    */
   async googleAuth(dto: GoogleAuthDto) {
-    const email = dto.email.trim().toLowerCase();
+    let email = (dto.email || '').trim().toLowerCase();
+    let name = (dto.name || '').trim();
+
+    // If a JWT token was passed from Neon Auth or Google OAuth, decode payload if email missing
+    if (!email && (dto.token || dto.idToken)) {
+      try {
+        const rawToken = dto.token || dto.idToken;
+        const parts = rawToken!.split('.');
+        if (parts.length === 3) {
+          const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
+          const payload = JSON.parse(payloadJson);
+          if (payload.email) email = payload.email.trim().toLowerCase();
+          if (payload.name && !name) name = payload.name.trim();
+        }
+      } catch (err) {
+        // quiet fallback
+      }
+    }
+
     if (!email) {
       throw new BadRequestException('Email address is required for Google authentication.');
     }
@@ -461,7 +483,7 @@ export class AuthService implements OnModuleInit {
 
     const targetRole = (dto.role || 'MOTHER').toUpperCase();
 
-    // If new user, create account in Neon DB
+    // If new user, create account in Neon DB & email credentials
     if (!user) {
       // If signing up as caregiver with joining code, validate code first
       let validPairing: any = null;
@@ -475,21 +497,34 @@ export class AuthService implements OnModuleInit {
         }
       }
 
-      // Generate a random secure password hash for OAuth accounts
-      const randomPassword = Math.random().toString(36).slice(-10) + '!A9z';
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      // Generate a user-friendly secure password (e.g. Aparai@7482!)
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      const generatedPassword = `Aparai@${randomDigits}!`;
+      const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+      const displayName = name || email.split('@')[0];
 
       user = await (this.prisma as any).user.create({
         data: {
           email,
-          name: dto.name || email.split('@')[0],
+          name: displayName,
           password: hashedPassword,
           role: targetRole,
-          isEmailVerified: true, // Google accounts are pre-verified
+          isEmailVerified: true, // Google accounts are pre-verified; no OTP needed!
           isProfileCompleted: targetRole === 'CAREGIVER' ? true : false,
         },
         include: { profile: true },
       });
+
+      // Send the welcome credentials email so user can also log in via Email & Password
+      try {
+        await this.emailService.sendGoogleWelcomeCredentialsEmail(
+          email,
+          displayName,
+          generatedPassword,
+        );
+      } catch (emailErr) {
+        this.logger.warn(`Failed to send credentials email to ${email}: ${emailErr}`);
+      }
 
       // If valid pairing was found, connect caregiver immediately
       if (validPairing) {
@@ -503,7 +538,16 @@ export class AuthService implements OnModuleInit {
         });
       }
     } else {
-      // Existing user: If caregiver and code provided, ensure linked
+      // Existing user: ensure email is marked verified (Google verified it)
+      if (!user.isEmailVerified) {
+        user = await (this.prisma as any).user.update({
+          where: { id: user.id },
+          data: { isEmailVerified: true },
+          include: { profile: true },
+        });
+      }
+
+      // If caregiver and code provided, ensure linked
       if (dto.joiningCode && user.role === 'CAREGIVER') {
         const cleanCode = dto.joiningCode.trim().toUpperCase();
         const pairing = await (this.prisma as any).caregiverPairing.findFirst({

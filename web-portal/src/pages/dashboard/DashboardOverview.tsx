@@ -137,7 +137,7 @@ export function DashboardOverview() {
           value={isLoading ? '...' : formatNumber(metrics.activeSubscriptions)}
           icon={<CreditCard className="h-5 w-5" />}
           trend={metrics.subscriptionGrowth}
-          trendLabel="maternal care plans"
+          trendLabel={metrics.activeSubscriptions === 0 ? "no active subscriptions" : "maternal care plans"}
           accent="blush"
         />
         <StatCard

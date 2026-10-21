@@ -16,6 +16,7 @@ import { UserDetails } from '@/pages/users/UserDetails';
 import { ContentList } from '@/pages/content/ContentList';
 import { ContentEditor } from '@/pages/content/ContentEditor';
 import { ContentPreview } from '@/pages/content/ContentPreview';
+import { WeeklyTasksList } from '@/pages/tasks/WeeklyTasksList';
 import { FAQList } from '@/pages/faqs/FAQList';
 import { FAQEditor } from '@/pages/faqs/FAQEditor';
 import { AnnouncementList } from '@/pages/announcements/AnnouncementList';
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="users/:id" element={<UserDetails />} />
               <Route path="content" element={<ContentList />} />
               <Route path="content/week-by-week" element={<ContentList />} />
+              <Route path="tasks" element={<WeeklyTasksList />} />
               <Route path="content/new" element={<ContentEditor />} />
               <Route path="content/:id" element={<ContentEditor />} />
               <Route path="content/:id/preview" element={<ContentPreview />} />

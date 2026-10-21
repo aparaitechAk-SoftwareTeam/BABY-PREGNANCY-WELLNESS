@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -100,10 +101,10 @@ export default function LoginScreen() {
     setErrorMessage('');
     setSocialLoading('google');
     try {
-      const candidateEmail =
-        loginMode === 'email' && /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(emailOrPhone.trim())
-          ? emailOrPhone.trim().toLowerCase()
-          : 'google.mother@gmail.com';
+      let candidateEmail = emailOrPhone.trim().toLowerCase();
+      if (!candidateEmail || !candidateEmail.includes('@')) {
+        candidateEmail = 'google.mother@gmail.com';
+      }
 
       const response = await authApi.googleAuth({
         email: candidateEmail,
@@ -115,13 +116,24 @@ export default function LoginScreen() {
       await setUser(user);
       await setToken(token);
 
-      if (user.role === 'CAREGIVER') {
-        router.replace('/(caregiver)');
-      } else if (!user.setupCompleted && !user.isProfileCompleted) {
-        router.replace('/(onboarding)/pregnancy-setup');
-      } else {
-        router.replace('/(mother)');
-      }
+      Alert.alert(
+        'Google Authentication Successful',
+        `Welcome to Aparaitech-wellness! If this was your first time signing in with Google, your account password has been sent to ${user.email} so you can also log in directly via Email & Password without OTP.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              if (user.role === 'CAREGIVER') {
+                router.replace('/(caregiver)');
+              } else if (!user.setupCompleted && !user.isProfileCompleted) {
+                router.replace('/(onboarding)/pregnancy-setup');
+              } else {
+                router.replace('/(mother)');
+              }
+            },
+          },
+        ]
+      );
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Google Sign-In failed. Please try again.';
       setErrorMessage(typeof msg === 'string' ? msg : Array.isArray(msg) ? msg[0] : 'Google Sign-In failed.');

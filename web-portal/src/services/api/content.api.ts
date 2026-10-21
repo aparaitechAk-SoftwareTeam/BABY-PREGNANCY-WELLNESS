@@ -214,6 +214,23 @@ export async function fetchTasksForWeek(week: number): Promise<any[]> {
   return [];
 }
 
+export async function fetchAdminTasks(params?: {
+  week?: number;
+  category?: string;
+  userId?: string;
+  search?: string;
+}): Promise<any[]> {
+  try {
+    const res = await apiClient.get('/pregnancy-content/admin/tasks/list', { params });
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch admin tasks:', e);
+  }
+  return [];
+}
+
 export async function createWeeklyTask(dto: {
   week: number;
   title: string;
@@ -223,8 +240,27 @@ export async function createWeeklyTask(dto: {
   emoji?: string;
   description?: string;
   clinicalRationale?: string;
+  userId?: string | null;
 }): Promise<any> {
   const res = await apiClient.post('/pregnancy-content/admin/tasks/create', dto);
+  return res?.data?.data;
+}
+
+export async function updateWeeklyTask(
+  taskId: string,
+  dto: {
+    week?: number;
+    title?: string;
+    category?: string;
+    timeStr?: string;
+    timeOfDay?: string;
+    emoji?: string;
+    description?: string;
+    clinicalRationale?: string;
+    userId?: string | null;
+  },
+): Promise<any> {
+  const res = await apiClient.post(`/pregnancy-content/admin/tasks/update/${taskId}`, dto);
   return res?.data?.data;
 }
 
@@ -241,7 +277,9 @@ export const contentApi = {
   submitForReview,
   publishContent,
   fetchTasksForWeek,
+  fetchAdminTasks,
   createWeeklyTask,
+  updateWeeklyTask,
   deleteWeeklyTask,
 };
 

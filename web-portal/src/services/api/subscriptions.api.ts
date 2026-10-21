@@ -1,52 +1,122 @@
+import { apiClient } from './client';
 import type { SubscriptionPlan } from '@/types';
 
-export const OFFICIAL_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  {
-    id: 'plan-free',
-    name: 'Free Starter Plan',
-    price: 0,
-    billingCycle: 'monthly',
-    features: [
-      'Week-by-week fetal growth updates',
-      'Daily water & kick tracker',
-      'Basic pregnancy health articles',
-      'Medical emergency SOS triggers',
-    ],
-    activeCount: 0,
-  },
-  {
-    id: 'plan-premium-monthly',
-    name: 'Maternal Premium (Monthly)',
-    price: 9.99,
-    billingCycle: 'monthly',
-    features: [
-      'All Free features included',
-      'Unrestricted Partner & Caregiver real-time sync',
-      '24/7 Obstetric AI guidance',
-      'Clinical contraction timer & smart birth plan exporter',
-      'Medical records vault & PDF clinic sharing',
-    ],
-    activeCount: 0,
-  },
-  {
-    id: 'plan-premium-yearly',
-    name: 'Maternal Premium (Annual / Full Trimester Journey)',
-    price: 89.99,
-    billingCycle: 'yearly',
-    features: [
-      'Full 40-week complete pregnancy journey coverage',
-      'Includes 3 postpartum recovery months',
-      'Priority triage support & fast escalation',
-      'Dedicated birth companion checklist',
-    ],
-    activeCount: 0,
-  },
-];
+export interface SubscriptionStats {
+  totalActive: number;
+  paidActive: number;
+  freeActive: number;
+  totalSubscribers: number;
+  monthlyRevenue: number;
+}
 
+export interface UserSubscription {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  planId: string;
+  plan: SubscriptionPlan;
+  status: 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED';
+  startDate: string;
+  endDate?: string | null;
+  autoRenew: boolean;
+  amountPaid: number;
+  paymentProvider?: string;
+  paymentId?: string;
+  createdAt: string;
+}
+
+/**
+ * 1. Fetch Subscription Plans directly from Neon PostgreSQL Database
+ */
 export async function fetchSubscriptionPlans(): Promise<SubscriptionPlan[]> {
-  return OFFICIAL_SUBSCRIPTION_PLANS;
+  try {
+    const res = await apiClient.get('/subscriptions/plans');
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return res.data.data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        billingCycle: p.billingCycle || 'monthly',
+        features: p.features || [],
+        activeCount: p.activeCount || 0,
+      }));
+    }
+  } catch (e) {
+    console.warn('Failed to fetch subscription plans from database:', e);
+  }
+  return [];
+}
+
+/**
+ * 2. Fetch Realtime Subscription Stats from Neon Database
+ */
+export async function fetchSubscriptionStats(): Promise<SubscriptionStats | null> {
+  try {
+    const res = await apiClient.get('/subscriptions/stats');
+    if (res?.data?.success && res.data.data) {
+      return res.data.data;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch subscription stats from database:', e);
+  }
+  return null;
+}
+
+/**
+ * 3. List all Subscriptions from Neon Database
+ */
+export async function fetchSubscriptionsList(params?: {
+  status?: string;
+  planId?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ data: UserSubscription[]; total: number }> {
+  try {
+    const res = await apiClient.get('/subscriptions/list', { params });
+    if (res?.data?.success && Array.isArray(res.data.data)) {
+      return {
+        data: res.data.data,
+        total: res.data.total || res.data.data.length,
+      };
+    }
+  } catch (e) {
+    console.warn('Failed to fetch subscriptions list from database:', e);
+  }
+  return { data: [], total: 0 };
+}
+
+/**
+ * 4. Assign / Activate Subscription for a User
+ */
+export async function assignSubscription(dto: {
+  userId: string;
+  planId?: string;
+  planCode?: string;
+  durationDays?: number;
+  amountPaid?: number;
+}): Promise<any> {
+  const res = await apiClient.post('/subscriptions/admin/assign', dto);
+  return res?.data?.data;
+}
+
+/**
+ * 5. Cancel a Subscription
+ */
+export async function cancelSubscription(id: string): Promise<any> {
+  const res = await apiClient.post(`/subscriptions/admin/cancel/${id}`);
+  return res?.data?.data;
 }
 
 export const subscriptionsApi = {
   fetchSubscriptionPlans,
+  fetchSubscriptionStats,
+  fetchSubscriptionsList,
+  assignSubscription,
+  cancelSubscription,
 };

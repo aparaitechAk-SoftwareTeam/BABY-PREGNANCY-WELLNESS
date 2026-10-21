@@ -57,6 +57,7 @@ export default function PartnerSyncScreen() {
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRefreshingCode, setIsRefreshingCode] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'Partner' | 'Family Member' | 'Doula'>('Partner');
 
   const inviteCode =
     pairingCode ||
@@ -74,7 +75,7 @@ export default function PartnerSyncScreen() {
   const handleCopyCode = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
-    Alert.alert('Invite Code Copied! 📋', `Share code ${inviteCode} with your partner to connect their Caregiver app.`);
+    Alert.alert('Invite Code Copied! 📋', `Share code ${inviteCode} with your ${selectedRole} to connect their Caregiver app.`);
   };
 
   /**
@@ -98,8 +99,11 @@ export default function PartnerSyncScreen() {
   const handleRegenerateCode = async () => {
     setIsRegenerating(true);
     try {
-      const newCode = await generateNewCode();
-      Alert.alert('New Code Generated! 🔑', `Your new pairing code is: ${newCode}`);
+      const newCode = await generateNewCode(selectedRole);
+      Alert.alert(
+        'New Code Generated! 🔑',
+        `Your new invitation code for ${selectedRole} is: ${newCode}\n\nShare this code with them to connect their Caregiver app.`
+      );
     } catch {
       Alert.alert('Error', 'Could not generate new code. Please try again.');
     } finally {
@@ -108,7 +112,7 @@ export default function PartnerSyncScreen() {
   };
 
   const handleShareWhatsApp = async () => {
-    const message = `Hi! I'm tracking our pregnancy journey on AparaiTech (Week ${currentWeek}). Join my Caregiver Circle using my invite code: *${inviteCode}* to view baby milestones, ultrasound appointments, and kick updates!`;
+    const message = `Hi! I'm tracking our pregnancy journey on AparaiTech (Week ${currentWeek}). Join my Caregiver Circle as my *${selectedRole}* using my invite code: *${inviteCode}* to view baby milestones, ultrasound appointments, and kick updates!`;
     const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
@@ -119,7 +123,7 @@ export default function PartnerSyncScreen() {
   };
 
   const handleShareGeneric = async () => {
-    const message = `Join my pregnancy wellness journey on AparaiTech (Week ${currentWeek}). Use invite code: ${inviteCode} to pair as my caregiver/partner.`;
+    const message = `Join my pregnancy wellness journey on AparaiTech (Week ${currentWeek}) as my ${selectedRole}. Use invite code: ${inviteCode} to pair as my caregiver.`;
     await Share.share({
       title: 'AparaiTech Caregiver Invite',
       message,
@@ -211,6 +215,34 @@ export default function PartnerSyncScreen() {
           <Text style={styles.heroDescription}>
             Paired members get real-time access to week-by-week baby milestones, clinic appointment reminders, and kick count logs.
           </Text>
+
+          {/* Role Selection Chips */}
+          <View style={styles.roleHeaderRow}>
+            <Text style={styles.roleSelectLabel}>SELECT ROLE TO INVITE</Text>
+            <Text style={styles.roleActiveBadge}>Inviting as: {selectedRole}</Text>
+          </View>
+          <View style={styles.roleChipsRow}>
+            {(['Partner', 'Family Member', 'Doula'] as const).map((role) => (
+              <TouchableOpacity
+                key={role}
+                style={[
+                  styles.roleChip,
+                  selectedRole === role && styles.roleChipActive,
+                ]}
+                onPress={() => setSelectedRole(role)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.roleChipText,
+                    selectedRole === role && styles.roleChipTextActive,
+                  ]}
+                >
+                  {role === 'Partner' ? '💍 Partner' : role === 'Family Member' ? '👨‍👩‍👧 Family' : '🩺 Doula'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {/* Code Box */}
           <View style={styles.codeContainer}>
@@ -566,7 +598,58 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#475569',
     lineHeight: 18,
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+  roleHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  roleSelectLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  roleActiveBadge: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#047857',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  roleChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  roleChip: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roleChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  roleChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  roleChipTextActive: {
+    color: '#059669',
+    fontWeight: '800',
   },
   codeContainer: {
     flexDirection: 'row',

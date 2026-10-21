@@ -48,11 +48,8 @@ export default function ManageAccessScreen() {
   const acceptCaregiverRequest = useFamilyStore((state) => state.acceptCaregiverRequest);
   const rejectCaregiverRequest = useFamilyStore((state) => state.rejectCaregiverRequest);
   const unlinkCaregiver = useFamilyStore((state) => state.unlinkCaregiver);
-  const generateNewCode = useFamilyStore((state) => state.generateNewCode);
 
   const [auditLogs, setAuditLogs] = useState<AccessLog[]>([]);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteRelation, setInviteRelation] = useState('Partner / Husband');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const loadData = React.useCallback(async () => {
@@ -137,17 +134,6 @@ export default function ManageAccessScreen() {
     );
   };
 
-  const handleGenerateAdditionalCode = async () => {
-    try {
-      const code = await generateNewCode(inviteRelation);
-      Alert.alert('New Code Generated! 🔑', `New invite code for ${inviteRelation}: ${code}\nShare this with them to request access.`);
-      setShowInviteModal(false);
-      await loadData();
-    } catch {
-      Alert.alert('Error', 'Could not generate invite code.');
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" />
@@ -171,57 +157,18 @@ export default function ManageAccessScreen() {
         {/* Top Action Banner */}
         <View style={styles.bannerCard}>
           <View style={styles.bannerLeft}>
-            <Text style={styles.bannerTitle}>Add Another Caregiver</Text>
-            <Text style={styles.bannerSub}>Support for partners, doulas, or maternal grandparents</Text>
+            <Text style={styles.bannerTitle}>Invite Caregiver / Family</Text>
+            <Text style={styles.bannerSub}>Select roles (Partner, Family, Doula) and share code on main screen</Text>
           </View>
           <TouchableOpacity
             style={styles.addBtn}
-            onPress={() => setShowInviteModal(!showInviteModal)}
+            onPress={() => router.push('/partner')}
             activeOpacity={0.8}
           >
             <UserPlus size={16} color="#FFFFFF" />
-            <Text style={styles.addBtnText}>Invite</Text>
+            <Text style={styles.addBtnText}>Invite Circle</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Inline Invite Form */}
-        {showInviteModal && (
-          <View style={styles.inviteFormCard}>
-            <Text style={styles.formTitle}>Invite an Additional Caregiver</Text>
-            <Text style={styles.inviteHelpText}>
-              Generate a unique pairing code specifically for another family member or doula.
-            </Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Relationship</Text>
-              <TextInput
-                style={styles.inputField}
-                placeholder="e.g. Doula / Grandmother / Sister"
-                placeholderTextColor="#94A3B8"
-                value={inviteRelation}
-                onChangeText={setInviteRelation}
-              />
-            </View>
-
-            <View style={styles.formBtnRow}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setShowInviteModal(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleGenerateAdditionalCode}
-                activeOpacity={0.8}
-              >
-                <Send size={14} color="#FFFFFF" />
-                <Text style={styles.submitBtnText}>Generate Code</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
 
         {/* Pending Requests Section (Mother Security Gatekeeper) */}
         {pendingRequests.length > 0 && (

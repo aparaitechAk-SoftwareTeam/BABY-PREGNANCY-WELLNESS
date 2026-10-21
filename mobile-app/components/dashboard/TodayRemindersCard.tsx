@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppointmentStore } from '../../store/appointment.store';
+import { useAppointmentStore, isMockAppointment } from '../../store/appointment.store';
 import { useRoutineStore } from '../../store/routine.store';
 
 interface TodayRemindersCardProps {
@@ -21,7 +21,8 @@ export function TodayRemindersCard({
   const tasks = useRoutineStore((state) => state.tasks);
   const toggleTask = useRoutineStore((state) => state.toggleTask);
   const appointments = useAppointmentStore((state) => state.appointments);
-  const nextAppointment = appointments.find((a) => !a.isCompleted) || appointments[0];
+  const realAppointments = appointments.filter((a) => !isMockAppointment(a.id));
+  const nextAppointment = realAppointments.find((a) => !a.isCompleted);
 
   const waterPercent = Math.min(100, Math.round((waterLoggedMl / waterGoalMl) * 100));
 
@@ -114,7 +115,7 @@ export function TodayRemindersCard({
             </Text>
             <Text style={styles.appointmentDoctor}>
               {nextAppointment
-                ? `${nextAppointment.doctorName} • ${nextAppointment.hospitalName} (${nextAppointment.dateStr} at ${nextAppointment.timeStr})`
+                ? `${nextAppointment.doctorName || 'Doctor'}${nextAppointment.hospitalName ? ` • ${nextAppointment.hospitalName}` : ''} (${nextAppointment.dateStr} at ${nextAppointment.timeStr})`
                 : 'Tap to schedule your prenatal visit & reminders'}
             </Text>
           </View>

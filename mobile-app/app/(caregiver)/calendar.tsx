@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Calendar, MapPin, Clock, User } from 'lucide-react-native';
-import { useAppointmentStore } from '../../store/appointment.store';
+import { useAppointmentStore, isMockAppointment } from '../../store/appointment.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 import { useFamilyStore } from '../../store/family.store';
 
@@ -29,19 +29,21 @@ export default function CaregiverCalendar() {
   // Derive appointments from paired mother's live DB records if available
   const displayAppointments = React.useMemo(() => {
     if (motherLiveData?.appointments && motherLiveData.appointments.length > 0) {
-      return motherLiveData.appointments.map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        type: 'Routine',
-        doctorName: a.doctorName || 'Doctor',
-        hospitalName: a.hospitalName || 'Clinic',
-        doctorPhone: a.doctorPhone || '',
-        dateStr: a.dateStr,
-        timeStr: a.timeStr,
-        isCompleted: a.status === 'COMPLETED',
-      }));
+      return motherLiveData.appointments
+        .filter((a: any) => !isMockAppointment(a.id))
+        .map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          type: 'Routine',
+          doctorName: a.doctorName || 'Doctor',
+          hospitalName: a.hospitalName || 'Clinic',
+          doctorPhone: a.doctorPhone || '',
+          dateStr: a.dateStr,
+          timeStr: a.timeStr,
+          isCompleted: a.status === 'COMPLETED',
+        }));
     }
-    return appointments;
+    return appointments.filter((a) => !isMockAppointment(a.id));
   }, [motherLiveData?.appointments, appointments]);
 
   const activeWeek = motherLiveData?.mother?.currentWeek || currentWeek || 20;

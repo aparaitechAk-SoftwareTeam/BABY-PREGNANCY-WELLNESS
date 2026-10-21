@@ -25,7 +25,7 @@ import {
   Building2,
   CheckCircle,
 } from 'lucide-react-native';
-import { useAppointmentStore } from '../../store/appointment.store';
+import { useAppointmentStore, isMockAppointment } from '../../store/appointment.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
 export default function RemindersScreen() {
@@ -41,7 +41,7 @@ export default function RemindersScreen() {
   const [kickCounterReminder, setKickCounterReminder] = useState(true);
   const [quietHours, setQuietHours] = useState(true);
 
-  const upcomingAppointments = appointments.filter((a) => !a.isCompleted);
+  const upcomingAppointments = appointments.filter((a) => !a.isCompleted && !isMockAppointment(a.id));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

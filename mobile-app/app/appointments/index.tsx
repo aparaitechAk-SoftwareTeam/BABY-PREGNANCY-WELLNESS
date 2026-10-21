@@ -27,12 +27,13 @@ import {
   Stethoscope,
   Filter,
 } from 'lucide-react-native';
-import { useAppointmentStore, AppointmentType, Appointment } from '../../store/appointment.store';
+import { useAppointmentStore, AppointmentType, Appointment, isMockAppointment } from '../../store/appointment.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
 export default function AppointmentsListScreen() {
   const router = useRouter();
   const appointments = useAppointmentStore((state) => state.appointments);
+  const realAppointments = appointments.filter((a) => !isMockAppointment(a.id));
   const toggleCompleted = useAppointmentStore((state) => state.toggleCompleted);
   const deleteAppointment = useAppointmentStore((state) => state.deleteAppointment);
   const pregnancyProfile = usePregnancyStore((state) => state.profile);
@@ -40,7 +41,7 @@ export default function AppointmentsListScreen() {
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'COMPLETED'>('UPCOMING');
   const [selectedType, setSelectedType] = useState<string>('ALL');
 
-  const filteredAppointments = appointments.filter((item) => {
+  const filteredAppointments = realAppointments.filter((item) => {
     const matchesTab = activeTab === 'UPCOMING' ? !item.isCompleted : !!item.isCompleted;
     const matchesType = selectedType === 'ALL' ? true : item.type === selectedType;
     return matchesTab && matchesType;
@@ -100,7 +101,7 @@ export default function AppointmentsListScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.segmentText, activeTab === 'UPCOMING' && styles.segmentTextActive]}>
-              Upcoming Visits ({appointments.filter((a) => !a.isCompleted).length})
+              Upcoming Visits ({realAppointments.filter((a) => !a.isCompleted).length})
             </Text>
           </TouchableOpacity>
 
@@ -110,7 +111,7 @@ export default function AppointmentsListScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.segmentText, activeTab === 'COMPLETED' && styles.segmentTextActive]}>
-              Past History ({appointments.filter((a) => !!a.isCompleted).length})
+              Past History ({realAppointments.filter((a) => !!a.isCompleted).length})
             </Text>
           </TouchableOpacity>
         </View>

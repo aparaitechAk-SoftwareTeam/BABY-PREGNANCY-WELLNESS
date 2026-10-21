@@ -10,18 +10,31 @@ export interface CreateAppointmentDto {
   timeStr?: string;
   notes?: string;
   status?: string;
+  userId?: string;
+  email?: string;
 }
 
 @Injectable()
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async resolveUserId(userId?: string): Promise<string | null> {
+    if (!userId) return null;
+    const user = await (this.prisma as any).user.findFirst({
+      where: {
+        OR: [{ id: userId }, { email: userId }],
+      },
+    });
+    return user ? user.id : userId;
+  }
+
   async create(userId: string, dto: CreateAppointmentDto) {
+    const effectiveUserId = (await this.resolveUserId(userId || dto.userId || dto.email)) || userId;
     const aptDate = dto.appointmentDate ? new Date(dto.appointmentDate) : new Date();
 
     const appointment = await (this.prisma as any).appointment.create({
       data: {
-        userId,
+        userId: effectiveUserId,
         title: dto.title || 'Doctor Consultation',
         doctorName: dto.doctorName,
         hospitalName: dto.hospitalName,
@@ -41,8 +54,16 @@ export class AppointmentsService {
   }
 
   async findAll(userId: string) {
+    const effectiveUserId = await this.resolveUserId(userId);
+    if (!effectiveUserId) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
     const list = await (this.prisma as any).appointment.findMany({
-      where: { userId },
+      where: { userId: effectiveUserId },
       orderBy: { appointmentDate: 'asc' },
     });
 
@@ -53,8 +74,9 @@ export class AppointmentsService {
   }
 
   async toggleStatus(userId: string, id: string) {
+    const effectiveUserId = (await this.resolveUserId(userId)) || userId;
     const apt = await (this.prisma as any).appointment.findFirst({
-      where: { id, userId },
+      where: { id, userId: effectiveUserId },
     });
 
     if (!apt) {
@@ -74,8 +96,9 @@ export class AppointmentsService {
   }
 
   async delete(userId: string, id: string) {
+    const effectiveUserId = (await this.resolveUserId(userId)) || userId;
     const apt = await (this.prisma as any).appointment.findFirst({
-      where: { id, userId },
+      where: { id, userId: effectiveUserId },
     });
 
     if (!apt) {

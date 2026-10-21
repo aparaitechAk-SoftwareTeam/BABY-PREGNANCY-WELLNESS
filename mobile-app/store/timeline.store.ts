@@ -152,7 +152,7 @@ const CLINICAL_TIMELINE_TEMPLATE: Omit<TimelineItem, 'dateStr'>[] = [
   },
 ];
 
-import { useAppointmentStore } from './appointment.store';
+import { useAppointmentStore, isMockAppointment } from './appointment.store';
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
   filter: 'all',
@@ -176,8 +176,11 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   getFilteredItems: (currentWeek = 20) => {
     const { items, filter, searchQuery } = get();
 
-    // Map live appointments from appointment store into timeline items
-    const liveAppointments = useAppointmentStore.getState().appointments.map((appt) => ({
+    // Map live database appointments from appointment store into timeline items
+    const liveAppointments = useAppointmentStore
+      .getState()
+      .appointments.filter((appt) => !isMockAppointment(appt.id))
+      .map((appt) => ({
       id: appt.id,
       title: appt.title,
       type: 'appointment' as const,

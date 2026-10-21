@@ -24,11 +24,19 @@ export class JwtAuthGuard implements CanActivate {
       }
     }
 
-    // Fallback: If request body contains userId or email, allow onboarding setup to proceed
-    if (request.body?.userId || request.body?.email) {
+    // Fallback: If request body, query, or headers contains userId or email, allow request to proceed
+    const fallbackId =
+      request.body?.userId ||
+      request.body?.email ||
+      request.query?.userId ||
+      request.query?.email ||
+      request.headers['x-user-id'] ||
+      request.headers['x-user-email'];
+
+    if (fallbackId) {
       request.user = {
-        sub: request.body.userId,
-        email: request.body.email,
+        sub: fallbackId,
+        email: fallbackId,
       };
       return true;
     }

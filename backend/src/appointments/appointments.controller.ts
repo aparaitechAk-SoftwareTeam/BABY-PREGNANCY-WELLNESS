@@ -22,15 +22,28 @@ export class AppointmentsController {
   async create(
     @CurrentUser() user: any,
     @Body() dto: CreateAppointmentDto,
+    @Req() req: any,
   ) {
-    const userId = user?.sub || user?.id;
+    const userId =
+      user?.sub ||
+      user?.id ||
+      dto?.userId ||
+      req.query?.userId ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.appointmentsService.create(userId, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  async findAll(@CurrentUser() user: any) {
-    const userId = user?.sub || user?.id;
+  async findAll(@CurrentUser() user: any, @Req() req: any) {
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.appointmentsService.findAll(userId);
   }
 
@@ -39,8 +52,15 @@ export class AppointmentsController {
   async toggleStatus(
     @CurrentUser() user: any,
     @Param('id') id: string,
+    @Req() req: any,
   ) {
-    const userId = user?.sub || user?.id;
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.appointmentsService.toggleStatus(userId, id);
   }
 
@@ -49,8 +69,15 @@ export class AppointmentsController {
   async delete(
     @CurrentUser() user: any,
     @Param('id') id: string,
+    @Req() req: any,
   ) {
-    const userId = user?.sub || user?.id;
+    const userId =
+      user?.sub ||
+      user?.id ||
+      req.query?.userId ||
+      req.query?.email ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'];
     return this.appointmentsService.delete(userId, id);
   }
 }

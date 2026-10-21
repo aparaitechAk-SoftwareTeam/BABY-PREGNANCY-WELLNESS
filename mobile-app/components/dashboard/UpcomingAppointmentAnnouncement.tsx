@@ -22,7 +22,7 @@ import {
   FileQuestion,
   Sparkles,
 } from 'lucide-react-native';
-import { useAppointmentStore, Appointment } from '../../store/appointment.store';
+import { useAppointmentStore, Appointment, isMockAppointment } from '../../store/appointment.store';
 import { usePregnancyStore } from '../../store/pregnancy.store';
 
 interface UpcomingAppointmentAnnouncementProps {
@@ -38,9 +38,9 @@ export function UpcomingAppointmentAnnouncement({
   const appointments = useAppointmentStore((state) => state.appointments);
   const pregnancyProfile = usePregnancyStore((state) => state.profile);
 
-  // Filter for uncompleted upcoming appointments
+  // Filter for uncompleted upcoming appointments from database
   const upcomingList = appointments
-    .filter((a) => !a.isCompleted)
+    .filter((a) => !a.isCompleted && !isMockAppointment(a.id))
     .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
   if (upcomingList.length === 0) {
@@ -58,13 +58,13 @@ export function UpcomingAppointmentAnnouncement({
     new Date(currentAppointment.timestamp).toDateString() ===
       new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
 
-  // Doctor & Hospital with fallbacks from mother profile
+  // Doctor & Hospital from database appointment record
   const doctorName =
-    currentAppointment.doctorName || pregnancyProfile?.doctorName || 'Your Doctor';
+    currentAppointment.doctorName || pregnancyProfile?.doctorName || 'Doctor';
   const hospitalName =
     currentAppointment.hospitalName ||
     pregnancyProfile?.hospitalName ||
-    'Maternity Clinic';
+    'Clinic';
   const doctorPhone =
     currentAppointment.doctorPhone || pregnancyProfile?.doctorPhone || '';
 

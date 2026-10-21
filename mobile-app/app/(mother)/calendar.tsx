@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { usePregnancyStore } from '../../store/pregnancy.store';
-import { useAppointmentStore, Appointment } from '../../store/appointment.store';
+import { useAppointmentStore, Appointment, isMockAppointment } from '../../store/appointment.store';
 import { Clock, MapPin, User, Plus, Bell } from 'lucide-react-native';
 
 export default function MotherCalendar() {
@@ -25,6 +25,7 @@ export default function MotherCalendar() {
   const trimester = usePregnancyStore((state) => state.trimester);
 
   const appointments = useAppointmentStore((state) => state.appointments);
+  const realAppointments = appointments.filter((a) => !isMockAppointment(a.id));
   const fetchLiveAppointments = useAppointmentStore((state) => state.fetchLiveAppointments);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -85,7 +86,7 @@ export default function MotherCalendar() {
           <View>
             <Text style={styles.screenHeading}>My Appointments</Text>
             <Text style={styles.screenSubtitle}>
-              Trimester {trimester} • {appointments.length} upcoming visits
+              Trimester {trimester} • {realAppointments.length} upcoming visits
             </Text>
           </View>
 
@@ -118,20 +119,20 @@ export default function MotherCalendar() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
           <View style={styles.sectionBadgeContainer}>
-            <Text style={styles.sectionBadge}>{appointments.length}</Text>
+            <Text style={styles.sectionBadge}>{realAppointments.length}</Text>
           </View>
         </View>
 
         {/* Appointments List */}
         <View style={styles.appointmentsList}>
-          {appointments.length === 0 ? (
+          {realAppointments.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateIcon}>📅</Text>
               <Text style={styles.emptyStateText}>No appointments scheduled yet</Text>
               <Text style={styles.emptyStateSubtext}>Tap + Add to schedule your first visit</Text>
             </View>
           ) : (
-            appointments.map((item, index) => {
+            realAppointments.map((item, index) => {
               const typeColors = getTypeColor(item.type);
               return (
                 <TouchableOpacity

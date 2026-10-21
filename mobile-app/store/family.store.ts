@@ -33,7 +33,7 @@ interface FamilyStoreState {
 }
 
 export const useFamilyStore = create<FamilyStoreState>((set, get) => ({
-  pairingCode: '',
+  pairingCode: '438618',
   pairedMembers: [],
   pendingRequests: [],
   isLoadingMotherCode: false,

@@ -27,12 +27,12 @@ const resolveBaseUrl = (): string => {
   }
 
   // Active Wi-Fi interface IP for testing
-  return 'http://10.47.171.247:3000/api';
+  return 'http://192.168.1.5:3000/api';
 };
 
 export const apiClient = axios.create({
   baseURL: resolveBaseUrl(),
-  timeout: 15000,
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
   },

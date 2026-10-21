@@ -79,15 +79,28 @@ export default function MotherProfile() {
   };
 
   const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        if (logout) await logout();
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
+      router.replace('/(auth)/login');
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to sign out? You can always sign back in with your credentials.')) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert('Sign Out?', 'Are you sure you want to sign out? You can always sign back in with your credentials.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: () => {
-          if (logout) logout();
-          router.replace('/(auth)/login');
-        },
+        onPress: doLogout,
       },
     ]);
   };

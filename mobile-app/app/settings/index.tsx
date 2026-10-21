@@ -44,15 +44,28 @@ export default function SettingsIndexScreen() {
   const [biometricLock, setBiometricLock] = useState(false);
 
   const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        await logout();
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
+      router.replace('/(auth)/login');
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to log out of AparaiTech?')) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert('Sign Out', 'Are you sure you want to log out of AparaiTech?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/welcome');
-        },
+        onPress: doLogout,
       },
     ]);
   };

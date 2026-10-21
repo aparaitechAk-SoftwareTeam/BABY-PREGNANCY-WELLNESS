@@ -45,7 +45,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     set({ user: null, token: null });
     try {
-      await AsyncStorage.multiRemove(['aparai_user', 'aparai_token', 'aparai_pregnancy_profile']);
+      await AsyncStorage.multiRemove([
+        'aparai_user',
+        'aparai_token',
+        'aparai_pregnancy_profile',
+        '@aparaitech_cached_pairing_code',
+        '@aparaitech_daily_routine_v1',
+      ]);
     } catch (error) {
       console.error('Failed to logout:', error);
     }

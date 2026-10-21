@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -188,9 +189,31 @@ export default function CaregiverHome() {
     setIsRefreshing(false);
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/(auth)/login');
+  const handleLogout = () => {
+    const doLogout = async () => {
+      try {
+        if (logout) await logout();
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
+      router.replace('/(auth)/login');
+    };
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to sign out? You can always sign back in with your credentials.')) {
+        doLogout();
+      }
+      return;
+    }
+
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: doLogout,
+      },
+    ]);
   };
 
   const handleTrackHealth = () => {
